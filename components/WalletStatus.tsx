@@ -13,6 +13,7 @@ import {
   initFarcasterWallet,
   onAccountChange,
   isWalletAvailable,
+  switchToCeloMainnet,
   type WalletAccount,
 } from '@/lib/farcaster-wallet'
 import { isInMiniApp } from '@/lib/farcaster-sdk'

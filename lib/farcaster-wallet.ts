@@ -107,6 +107,66 @@ export async function getFarcasterWalletProvider() {
   throw new Error('Farcaster wallet provider not available')
 }
 
+/**
+ * Switch wallet to Celo Mainnet
+ */
+export async function switchToCeloMainnet(): Promise<number> {
+  try {
+    const provider = await getFarcasterWalletProvider()
+    const CELO_MAINNET_CHAIN_ID = parseInt(process.env.NEXT_PUBLIC_CELO_CHAIN_ID || '42220')
+    const CELO_MAINNET_CHAIN_ID_HEX = '0x' + CELO_MAINNET_CHAIN_ID.toString(16)
+
+    console.log('[Wallet] Attempting to switch to Celo Mainnet (chainId: ' + CELO_MAINNET_CHAIN_ID + ')...')
+
+    try {
+      // Try to switch chain (most wallets support this)
+      await provider.request({
+        method: 'wallet_switchEthereumChain',
+        params: [{ chainId: CELO_MAINNET_CHAIN_ID_HEX }],
+      })
+      console.log('[Wallet] Successfully switched to Celo Mainnet')
+      return CELO_MAINNET_CHAIN_ID
+    } catch (switchError: any) {
+      // If chain doesn't exist, try to add it
+      if (switchError.code === 4902 || switchError.message?.includes('Unrecognized chain ID')) {
+        console.log('[Wallet] Chain not recognized, attempting to add it...')
+        
+        const CELO_RPC_URL = process.env.NEXT_PUBLIC_CELO_RPC_URL || 'https://forno.celo.org'
+        
+        try {
+          await provider.request({
+            method: 'wallet_addEthereumChain',
+            params: [
+              {
+                chainId: CELO_MAINNET_CHAIN_ID_HEX,
+                chainName: 'Celo Mainnet',
+                rpcUrls: [CELO_RPC_URL],
+                nativeCurrency: {
+                  name: 'Celo',
+                  symbol: 'CELO',
+                  decimals: 18,
+                },
+                blockExplorerUrls: ['https://explorer.celo.org'],
+              },
+            ],
+          })
+          console.log('[Wallet] Successfully added and switched to Celo Mainnet')
+          return CELO_MAINNET_CHAIN_ID
+        } catch (addError) {
+          console.error('[Wallet] Error adding Celo Mainnet:', addError)
+          throw addError
+        }
+      } else {
+        console.error('[Wallet] Error switching chain:', switchError)
+        throw switchError
+      }
+    }
+  } catch (error) {
+    console.error('[Wallet] Error switching to Celo Mainnet:', error)
+    throw error
+  }
+}
+
 export async function connectFarcasterWallet(): Promise<WalletAccount> {
   try {
     if (!isWalletAvailable()) {
@@ -135,9 +195,23 @@ export async function connectFarcasterWallet(): Promise<WalletAccount> {
     const chainId = parseInt(chainIdHex, 16)
     console.log('[Wallet] Chain ID:', chainId)
 
+    // Auto-switch to Celo Mainnet if not already on it
+    const CELO_MAINNET_CHAIN_ID = parseInt(process.env.NEXT_PUBLIC_CELO_CHAIN_ID || '42220')
+    if (chainId !== CELO_MAINNET_CHAIN_ID) {
+      console.log('[Wallet] Current chain is not Celo Mainnet, switching...')
+      try {
+        await switchToCeloMainnet()
+      } catch (switchError) {
+        console.warn('[Wallet] Failed to auto-switch to Celo Mainnet:', switchError)
+        // Continue anyway, the user may need to switch manually
+      }
+    } else {
+      console.log('[Wallet] Already on Celo Mainnet')
+    }
+
     return {
       address: accounts[0],
-      chainId,
+      chainId: CELO_MAINNET_CHAIN_ID,
       isConnected: true,
     }
   } catch (error) {

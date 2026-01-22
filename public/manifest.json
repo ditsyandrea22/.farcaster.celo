@@ -2,6 +2,8 @@
   "name": "Farcaster Names",
   "short_name": "Names",
   "description": "Register and manage .farcaster.celo domain names with NFT functionality on Celo mainnet",
+  "splashImageUrl": "/hero-logo.png",
+  "splashBackgroundColor": "#000000",
   "start_url": "/",
   "scope": "/",
   "display": "standalone",
