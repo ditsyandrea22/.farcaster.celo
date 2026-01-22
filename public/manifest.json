@@ -1,0 +1,42 @@
+{
+  "name": "Farcaster Names",
+  "description": "Register and manage .farcaster.celo domain names with NFT functionality on Celo mainnet",
+  "short_name": "Farcaster Names",
+  "start_url": "/",
+  "display": "standalone",
+  "background_color": "#000000",
+  "theme_color": "#8A63D2",
+  "orientation": "portrait-primary",
+  "scope": "/",
+  "dir": "ltr",
+  "lang": "en",
+  "icons": [
+    {
+      "src": "/logo-192-v2.png",
+      "sizes": "192x192",
+      "type": "image/png",
+      "purpose": "any"
+    },
+    {
+      "src": "/logo-512-v2.png",
+      "sizes": "512x512",
+      "type": "image/png",
+      "purpose": "any"
+    },
+    {
+      "src": "/hero-logo.png",
+      "sizes": "1200x400",
+      "type": "image/png",
+      "purpose": "maskable"
+    }
+  ],
+  "categories": ["productivity", "utilities"],
+  "screenshots": [
+    {
+      "src": "/logo-512-v2.png",
+      "sizes": "512x512",
+      "type": "image/png",
+      "form_factor": "narrow"
+    }
+  ]
+}

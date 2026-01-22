@@ -1,0 +1,33 @@
+{
+  "accountAssociation": {
+    "header": "eyJhbGciOiAiRWQyNTUxOSIsInR5cCI6ICJKV1QifQ",
+    "payload": "eyJkb21haW4iOiAieW91ci1kb21haW4uY29tIn0",
+    "signature": "0xYourSignatureHere"
+  },
+  "version": "1",
+  "name": "Farcaster Names",
+  "shortName": "farcaster-names",
+  "description": "Register and manage .farcaster.celo domain names with NFT functionality on Celo mainnet",
+  "logo": "/logo-512-v2.png",
+  "heroImage": "/hero-logo.png",
+  "splashImageUrl": "/logo-512-v2.png",
+  "splashBackgroundColor": "#000000",
+  "author": "Farcaster Names",
+  "website": "https://farcaster-names.example.com",
+  "homepage": "https://farcaster-names.example.com",
+  "iconUrl": "/logo-192-v2.png",
+  "categories": ["productivity", "utilities"],
+  "actions": [
+    {
+      "type": "post",
+      "name": "Register Domain",
+      "icon": "pencil"
+    },
+    {
+      "type": "post",
+      "name": "View Domains",
+      "icon": "file"
+    }
+  ],
+  "tags": ["domain", "nft", "celo", "web3"]
+}
