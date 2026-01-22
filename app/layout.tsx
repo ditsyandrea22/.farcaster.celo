@@ -118,11 +118,13 @@ export default function RootLayout({
       <body className={`font-sans antialiased`}>
         {/* FarcasterReady signals to Warpcast that the app has finished loading */}
         <FarcasterReady />
-        <WalletProvider>
-          <FarcasterSDKProvider>
-            {children}
-          </FarcasterSDKProvider>
-        </WalletProvider>
+        <ReactQueryProvider>
+          <WalletProvider>
+            <FarcasterSDKProvider>
+              {children}
+            </FarcasterSDKProvider>
+          </WalletProvider>
+        </ReactQueryProvider>
         <Analytics />
       </body>
     </html>
