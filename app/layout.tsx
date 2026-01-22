@@ -3,6 +3,7 @@ import type { Metadata, Viewport } from 'next'
 import { Geist, Geist_Mono } from 'next/font/google'
 import { Analytics } from '@vercel/analytics/next'
 import { FarcasterSDKProvider } from '@/components/farcaster-sdk-provider'
+import { FarcasterReady } from '@/components/FarcasterReady'
 import './globals.css'
 
 const _geist = Geist({ subsets: ["latin"] });
@@ -111,10 +112,10 @@ export default function RootLayout({
         <link rel="manifest" href="/manifest.json" />
         <link rel="icon" href="/logo-192-v2.png" type="image/png" />
         <link rel="apple-touch-icon" href="/logo-512-v2.png" />
-        {/* Farcaster Mini App SDK - Required for wallet detection and mini app features */}
-        <script async src="https://cdn.jsdelivr.net/npm/@farcaster/frames@latest/dist/sdk.js"></script>
       </head>
       <body className={`font-sans antialiased`}>
+        {/* FarcasterReady signals to Warpcast that the app has finished loading */}
+        <FarcasterReady />
         <FarcasterSDKProvider>
           {children}
         </FarcasterSDKProvider>
