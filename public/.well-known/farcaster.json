@@ -1,8 +1,8 @@
 {
   "accountAssociation": {
-    "header": "eyJhbGciOiAiRWQyNTUxOSIsInR5cCI6ICJKV1QifQ",
-    "payload": "eyJkb21haW4iOiAieW91ci1kb21haW4uY29tIn0",
-    "signature": "0xYourSignatureHere"
+    "header": "eyJmaWQiOjI1ODI1MCwidHlwZSI6ImN1c3RvZHkiLCJrZXkiOiIweDFEODE0RmNEOTM4NzRkZjI5QTczNzM5M2VkN2M3ZUQyZUVEN2MzYTYifQ",
+    "payload": "eyJkb21haW4iOiJmYXJjYXN0ZXItY2Vsby52ZXJjZWwuYXBwIn0",
+    "signature": "pmNO2zJtHWJ0oiLWlTOMjrUWZazxci2ZDCToAHrQuY0oHcGeWul9svkyaapOL5tPlIPDT/ywutOFlsjjHRXMxBs="
   },
   "version": "1",
   "name": "Farcaster Names",
