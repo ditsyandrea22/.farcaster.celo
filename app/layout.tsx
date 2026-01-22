@@ -24,10 +24,15 @@ export const metadata: Metadata = {
   description: 'Register and manage .farcaster.celo domain names with NFT functionality on Celo mainnet',
   generator: 'Farcaster Mini App',
   manifest: '/manifest.json',
+  applicationName: 'Farcaster Names',
   appleWebApp: {
     capable: true,
     statusBarStyle: 'black-translucent',
     title: 'Farcaster Names',
+    startupImage: '/hero-logo.png',
+  },
+  formatDetection: {
+    telephone: false,
   },
   icons: {
     icon: '/logo-192-v2.png',
@@ -39,6 +44,11 @@ export const metadata: Metadata = {
         sizes: '192x192',
         type: 'image/png',
       },
+      {
+        rel: 'mask-icon',
+        url: '/hero-logo.png',
+        color: '#8A63D2',
+      },
     ],
   },
   openGraph: {
@@ -49,6 +59,13 @@ export const metadata: Metadata = {
     description: 'Own your Farcaster identity with a verifiable NFT domain on Celo mainnet',
     siteName: 'Farcaster Names',
     images: [
+      {
+        url: `${APP_URL}/hero-logo.png`,
+        width: 1200,
+        height: 400,
+        alt: 'Farcaster Names',
+        type: 'image/png',
+      },
       {
         url: `${APP_URL}/logo-512-v2.png`,
         width: 512,
@@ -82,11 +99,18 @@ export default function RootLayout({
   return (
     <html lang="en" suppressHydrationWarning>
       <head>
+        <meta charSet="utf-8" />
+        <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover" />
         <meta name="theme-color" content="#8A63D2" />
         <meta name="mobile-web-app-capable" content="yes" />
         <meta name="apple-mobile-web-app-capable" content="yes" />
         <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
+        <meta name="apple-mobile-web-app-title" content="Farcaster Names" />
+        <meta name="apple-touch-fullscreen" content="yes" />
+        <meta name="color-scheme" content="dark light" />
         <link rel="manifest" href="/manifest.json" />
+        <link rel="icon" href="/logo-192-v2.png" type="image/png" />
+        <link rel="apple-touch-icon" href="/logo-512-v2.png" />
         {/* Farcaster Mini App SDK - Required for wallet detection and mini app features */}
         <script async src="https://cdn.jsdelivr.net/npm/@farcaster/frames@latest/dist/sdk.js"></script>
       </head>

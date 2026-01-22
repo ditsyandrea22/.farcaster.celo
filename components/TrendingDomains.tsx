@@ -1,7 +1,7 @@
 'use client'
 
 import { useState, useEffect } from 'react'
-import { TrendingUp, ExternalLink } from 'lucide-react'
+import { TrendingUp, ExternalLink, Loader2 } from 'lucide-react'
 import { Card } from '@/components/ui/card'
 import { Badge } from '@/components/ui/badge'
 import { Button } from '@/components/ui/button'
@@ -14,48 +14,34 @@ interface TrendingDomain {
   trendingScore: number
 }
 
-const MOCK_TRENDING: TrendingDomain[] = [
-  {
-    name: 'vitalik',
-    registrations: 1200,
-    owner: '0x1234567890123456789012345678901234567890',
-    expiresAt: Math.floor(Date.now() / 1000) + 365 * 24 * 60 * 60,
-    trendingScore: 98,
-  },
-  {
-    name: 'ethereum',
-    registrations: 950,
-    owner: '0x0987654321098765432109876543210987654321',
-    expiresAt: Math.floor(Date.now() / 1000) + 180 * 24 * 60 * 60,
-    trendingScore: 87,
-  },
-  {
-    name: 'builder',
-    registrations: 756,
-    owner: '0xabcdefabcdefabcdefabcdefabcdefabcdefabcd',
-    expiresAt: Math.floor(Date.now() / 1000) + 250 * 24 * 60 * 60,
-    trendingScore: 76,
-  },
-  {
-    name: 'nft-artist',
-    registrations: 543,
-    owner: '0xfedcbafedcbafedcbafedcbafedcbafedcbafed',
-    expiresAt: Math.floor(Date.now() / 1000) + 300 * 24 * 60 * 60,
-    trendingScore: 64,
-  },
-]
-
 export function TrendingDomains() {
   const [trending, setTrending] = useState<TrendingDomain[]>([])
   const [loading, setLoading] = useState(true)
 
   useEffect(() => {
-    const timer = setTimeout(() => {
-      setTrending(MOCK_TRENDING)
-      setLoading(false)
-    }, 500)
+    const loadTrendingDomains = async () => {
+      try {
+        setLoading(true)
+        
+        // Fetch trending domains from API or blockchain
+        // For now, return empty list as we need contract data
+        // This would be populated from smart contract queries for popular/newly registered domains
+        const response = await fetch('/api/trending')
+        if (response.ok) {
+          const data = await response.json()
+          setTrending(data.domains || [])
+        } else {
+          setTrending([])
+        }
+      } catch (error) {
+        console.error('Error loading trending domains:', error)
+        setTrending([])
+      } finally {
+        setLoading(false)
+      }
+    }
 
-    return () => clearTimeout(timer)
+    loadTrendingDomains()
   }, [])
 
   if (loading) {
@@ -65,6 +51,19 @@ export function TrendingDomains() {
           <div key={i} className="h-16 bg-muted rounded-lg animate-pulse" />
         ))}
       </div>
+    )
+  }
+
+  if (trending.length === 0) {
+    return (
+      <Card className="p-8 text-center border-dashed">
+        <div className="text-center space-y-2">
+          <Loader2 className="w-5 h-5 animate-spin text-muted-foreground mx-auto" />
+          <p className="text-sm text-muted-foreground">
+            No trending domains yet. Check back soon!
+          </p>
+        </div>
+      </Card>
     )
   }
 

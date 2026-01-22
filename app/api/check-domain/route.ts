@@ -1,6 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server'
-
-const MOCK_REGISTERED_DOMAINS = ['alice', 'bob', 'charlie', 'farcaster', 'celo']
+import { checkDomainAvailability, validateDomainName } from '@/lib/blockchain'
 
 export async function GET(request: NextRequest) {
   try {
@@ -14,18 +13,21 @@ export async function GET(request: NextRequest) {
       )
     }
 
-    if (domain.length < 3 || domain.length > 63) {
+    // Validate domain format
+    const validation = validateDomainName(domain)
+    if (!validation.isValid) {
       return NextResponse.json(
-        { error: 'Invalid domain length' },
+        { error: validation.error || 'Invalid domain' },
         { status: 400 }
       )
     }
 
-    const isAvailable = !MOCK_REGISTERED_DOMAINS.includes(domain)
+    // Check real blockchain availability
+    const available = await checkDomainAvailability(domain)
 
     return NextResponse.json({
       domain,
-      available: isAvailable,
+      available,
       fullDomain: `${domain}.farcaster.celo`,
       timestamp: new Date().toISOString(),
     })

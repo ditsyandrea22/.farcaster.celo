@@ -1,4 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server'
+import { ethers } from 'ethers'
 import type { RegistrationRequest, TransactionResult } from '@/lib/types'
 
 interface RegisterRequest extends RegistrationRequest {
@@ -18,21 +19,41 @@ export async function POST(request: NextRequest) {
       )
     }
 
-    const simulatedHash = `0x${Math.random().toString(16).slice(2)}${Math.random()
-      .toString(16)
-      .slice(2)}`
-    const blockNumber = Math.floor(Math.random() * 1000000) + 20000000
+    // Validate wallet address
+    if (!ethers.isAddress(walletAddress)) {
+      return NextResponse.json(
+        { error: 'Invalid wallet address' },
+        { status: 400 }
+      )
+    }
 
-    const result: TransactionResult = {
-      hash: simulatedHash,
-      blockNumber,
-      status: 'success',
-      gasUsed: '50000000000000000',
-      gasPrice: '250000000000000000',
+    // Real smart contract call would happen here
+    // This is a placeholder for actual transaction
+    const CONTRACT_ADDRESS = process.env.NEXT_PUBLIC_CELO_CONTRACT_ADDRESS || ''
+    
+    if (!CONTRACT_ADDRESS) {
+      return NextResponse.json(
+        { error: 'Contract not configured' },
+        { status: 500 }
+      )
+    }
+
+    // For now, prepare the transaction data structure
+    // Actual transaction signing happens on client with wallet
+    const fullDomain = `${domain}.farcaster.celo`
+    const metadataURI = `/api/metadata/${domain}`
+
+    // These values would be returned from actual blockchain transaction
+    const mockResult: TransactionResult = {
+      hash: `0x${'0'.repeat(64)}`, // Placeholder - replace with actual tx hash
+      blockNumber: 0, // Placeholder
+      status: 'pending',
+      gasUsed: '0',
+      gasPrice: '0',
     }
 
     const registrationData = {
-      domain: `${domain}.farcaster.celo`,
+      domain: fullDomain,
       owner: walletAddress,
       farcasterUsername,
       fid,
@@ -40,15 +61,15 @@ export async function POST(request: NextRequest) {
       socialLinks,
       registeredAt: new Date().toISOString(),
       expiresAt: new Date(Date.now() + 365 * 24 * 60 * 60 * 1000).toISOString(),
+      metadataURI,
       nftMetadata: {
-        name: `${domain}.farcaster.celo`,
-        description: 'A Farcaster domain registered on Celo mainnet',
-        image: `https://via.placeholder.com/500x500?text=${domain}.farcaster.celo`,
-        external_url: `https://opensea.io/assets/celo/${walletAddress}`,
+        name: fullDomain,
+        description: `Farcaster domain ${fullDomain} on Celo mainnet`,
+        external_url: `https://opensea.io/collection/farcaster-celo-domains`,
         attributes: [
           {
             trait_type: 'Domain',
-            value: `${domain}.farcaster.celo`,
+            value: fullDomain,
           },
           {
             trait_type: 'Farcaster Username',
@@ -58,20 +79,26 @@ export async function POST(request: NextRequest) {
             trait_type: 'Farcaster ID',
             value: fid.toString(),
           },
+          {
+            trait_type: 'Owner',
+            value: walletAddress,
+          },
         ],
       },
     }
 
     return NextResponse.json({
       success: true,
-      transaction: result,
+      transaction: mockResult,
       registration: registrationData,
+      contractAddress: CONTRACT_ADDRESS,
       timestamp: new Date().toISOString(),
+      message: 'Prepare to sign transaction with your wallet',
     })
   } catch (error) {
-    console.error('Error registering domain:', error)
+    console.error('Error preparing domain registration:', error)
     return NextResponse.json(
-      { error: 'Registration failed' },
+      { error: 'Registration preparation failed' },
       { status: 500 }
     )
   }

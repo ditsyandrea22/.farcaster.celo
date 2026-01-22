@@ -25,6 +25,142 @@ export async function getGasPrice() {
   }
 }
 
+/**
+ * Get real wallet balance from Celo mainnet
+ */
+export async function getWalletBalance(address: string): Promise<string> {
+  try {
+    if (!ethers.isAddress(address)) {
+      throw new Error('Invalid wallet address')
+    }
+
+    const provider = getCeloProvider()
+    const balanceWei = await provider.getBalance(address)
+    const balanceCELO = ethers.formatEther(balanceWei)
+    return balanceCELO
+  } catch (error) {
+    console.error('Error getting wallet balance:', error)
+    return '0'
+  }
+}
+
+/**
+ * Get real ENS-like domain registry data
+ * This queries the smart contract for registered domains
+ */
+export async function getRegisteredDomainsByOwner(ownerAddress: string): Promise<string[]> {
+  try {
+    if (!ethers.isAddress(ownerAddress)) {
+      throw new Error('Invalid owner address')
+    }
+
+    if (!CONTRACT_ADDRESS) {
+      console.warn('CONTRACT_ADDRESS not configured, returning empty domains')
+      return []
+    }
+
+    const provider = getCeloProvider()
+    
+    // Basic contract ABI for domain registry (minimal interface)
+    const ABI = [
+      'function getDomainsByOwner(address owner) view returns (string[])',
+      'function getDomain(string name) view returns (tuple(string name, address owner, uint256 expiresAt, bool active))',
+      'function isAvailable(string name) view returns (bool)',
+    ]
+
+    try {
+      const contract = new ethers.Contract(CONTRACT_ADDRESS, ABI, provider)
+      const domains = await contract.getDomainsByOwner(ownerAddress)
+      return domains || []
+    } catch (error) {
+      console.warn('Error querying contract for domains:', error)
+      return []
+    }
+  } catch (error) {
+    console.error('Error getting registered domains:', error)
+    return []
+  }
+}
+
+/**
+ * Check if a domain is available on the blockchain
+ */
+export async function checkDomainAvailability(domain: string): Promise<boolean> {
+  try {
+    if (!domain || domain.length < 3) {
+      throw new Error('Invalid domain name')
+    }
+
+    if (!CONTRACT_ADDRESS) {
+      console.warn('CONTRACT_ADDRESS not configured, cannot check availability')
+      return false
+    }
+
+    const provider = getCeloProvider()
+    
+    const ABI = [
+      'function isAvailable(string name) view returns (bool)',
+    ]
+
+    try {
+      const contract = new ethers.Contract(CONTRACT_ADDRESS, ABI, provider)
+      const available = await contract.isAvailable(domain)
+      return available
+    } catch (error) {
+      console.warn('Error checking domain availability:', error)
+      // If contract call fails, assume not available
+      return false
+    }
+  } catch (error) {
+    console.error('Error checking domain:', error)
+    return false
+  }
+}
+
+/**
+ * Get domain info from blockchain
+ */
+export async function getDomainInfo(domain: string): Promise<{
+  name: string
+  owner: string
+  expiresAt: number
+  active: boolean
+} | null> {
+  try {
+    if (!domain || domain.length < 3) {
+      throw new Error('Invalid domain name')
+    }
+
+    if (!CONTRACT_ADDRESS) {
+      console.warn('CONTRACT_ADDRESS not configured')
+      return null
+    }
+
+    const provider = getCeloProvider()
+    
+    const ABI = [
+      'function getDomain(string name) view returns (tuple(string name, address owner, uint256 expiresAt, bool active))',
+    ]
+
+    try {
+      const contract = new ethers.Contract(CONTRACT_ADDRESS, ABI, provider)
+      const domainInfo = await contract.getDomain(domain)
+      return {
+        name: domainInfo.name,
+        owner: domainInfo.owner,
+        expiresAt: Number(domainInfo.expiresAt),
+        active: domainInfo.active,
+      }
+    } catch (error) {
+      console.warn('Error getting domain info:', error)
+      return null
+    }
+  } catch (error) {
+    console.error('Error getting domain info:', error)
+    return null
+  }
+}
+
 export async function estimateRegistrationCost(): Promise<{
   gasEstimate: string
   gasPrice: string
@@ -102,17 +238,6 @@ export function formatCELOAmount(amount: string, decimals: number = 4): string {
     return num.toFixed(decimals)
   } catch {
     return '0'
-  }
-}
-
-export async function checkDomainAvailability(domain: string): Promise<boolean> {
-  try {
-    const response = await fetch(`/api/check-domain?domain=${domain}`)
-    const data = await response.json()
-    return data.available
-  } catch (error) {
-    console.error('Error checking domain:', error)
-    return false
   }
 }
 

@@ -37,8 +37,10 @@ export default function Home() {
   }, [])
 
   const handleWalletConnect = async () => {
+    // Wallet connection is now handled by WalletStatus component
+    // which uses real Farcaster SDK wallet
     setWalletConnected(true)
-    setWalletAddress('0x' + Math.random().toString(16).slice(2, 42))
+    // Address is set by WalletStatus component
   }
 
   const handleRegistration = async (data: RegistrationData) => {

@@ -13,6 +13,11 @@
   "background_color": "#000000",
   "theme_color": "#8A63D2",
   "categories": ["productivity", "utilities"],
+  "web_app_capable": true,
+  "mobile_web_app_capable": true,
+  "apple_mobile_web_app_capable": true,
+  "status_bar_style": "black-translucent",
+  "viewport_fit": "cover",
   "icons": [
     {
       "src": "/logo-192-v2.png",

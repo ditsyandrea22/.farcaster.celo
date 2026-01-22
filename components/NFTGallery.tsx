@@ -6,58 +6,59 @@ import { ExternalLink, Loader2 } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { Card } from '@/components/ui/card'
 import { Badge } from '@/components/ui/badge'
+import { getRegisteredDomainsByOwner } from '@/lib/blockchain'
 import type { NFTCard } from '@/lib/types'
 
 interface NFTGalleryProps {
   owner?: string
 }
 
-const MOCK_NFTS: NFTCard[] = [
-  {
-    id: '1',
-    name: 'alice.farcaster.celo',
-    description: 'A Farcaster domain registered on Celo mainnet',
-    image: 'https://via.placeholder.com/300x300?text=alice.farcaster.celo',
-    owner: '0x1234567890123456789012345678901234567890',
-    expiresAt: Math.floor(Date.now() / 1000) + 365 * 24 * 60 * 60,
-    opensea_url: 'https://opensea.io/assets/celo/0x0000/1',
-    traits: {
-      farcaster_username: 'alice',
-      bio: 'Farcaster builder and web3 enthusiast',
-      social_links: 'twitter.com/alice',
-    },
-  },
-  {
-    id: '2',
-    name: 'bob.farcaster.celo',
-    description: 'A Farcaster domain registered on Celo mainnet',
-    image: 'https://via.placeholder.com/300x300?text=bob.farcaster.celo',
-    owner: '0x0987654321098765432109876543210987654321',
-    expiresAt: Math.floor(Date.now() / 1000) + 180 * 24 * 60 * 60,
-    opensea_url: 'https://opensea.io/assets/celo/0x0000/2',
-    traits: {
-      farcaster_username: 'bob',
-      bio: 'Crypto developer and artist',
-      social_links: 'discord.gg/bob',
-    },
-  },
-]
-
 export function NFTGallery({ owner }: NFTGalleryProps) {
   const [nfts, setNfts] = useState<NFTCard[]>([])
   const [loading, setLoading] = useState(true)
+  const [error, setError] = useState<string | null>(null)
 
   useEffect(() => {
     const loadNFTs = async () => {
       setLoading(true)
+      setError(null)
       try {
-        await new Promise((resolve) => setTimeout(resolve, 500))
-        const filtered = owner
-          ? MOCK_NFTS.filter((nft) => nft.owner.toLowerCase() === owner.toLowerCase())
-          : MOCK_NFTS
-        setNfts(filtered)
-      } catch (error) {
-        console.error('Error loading NFTs:', error)
+        if (!owner) {
+          setNfts([])
+          setLoading(false)
+          return
+        }
+
+        // Fetch real domains from blockchain
+        const domains = await getRegisteredDomainsByOwner(owner)
+        
+        if (domains.length === 0) {
+          setNfts([])
+          setLoading(false)
+          return
+        }
+
+        // Convert domains to NFT cards
+        const nftCards: NFTCard[] = domains.map((domain, index) => ({
+          id: `${index + 1}`,
+          name: domain,
+          description: `Farcaster domain on Celo mainnet`,
+          image: `/api/domain-image?domain=${domain}`, // Generate domain image
+          owner: owner,
+          expiresAt: Math.floor(Date.now() / 1000) + 365 * 24 * 60 * 60,
+          opensea_url: `https://opensea.io/collection/farcaster-celo-domains`,
+          traits: {
+            farcaster_username: domain.split('.')[0],
+            bio: `Registered domain on Celo`,
+            social_links: '',
+          },
+        }))
+
+        setNfts(nftCards)
+      } catch (err) {
+        console.error('Error loading NFTs:', err)
+        setError('Failed to load domains')
+        setNfts([])
       } finally {
         setLoading(false)
       }
