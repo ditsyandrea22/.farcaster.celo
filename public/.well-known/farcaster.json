@@ -13,8 +13,8 @@
   "splashImageUrl": "/logo-512-v2.png",
   "splashBackgroundColor": "#000000",
   "author": "Farcaster Names",
-  "website": "https://farcaster-names.example.com",
-  "homepage": "https://farcaster-names.example.com",
+  "website": "https://farcaster-celo.vercel.app",
+  "homepage": "https://farcaster-celo.vercel.app",
   "iconUrl": "/logo-192-v2.png",
   "categories": ["productivity", "utilities"],
   "actions": [
