@@ -120,6 +120,48 @@ const nextConfig = {
       'lucide-react',
     ],
   },
+
+  // Webpack configuration untuk handle problematic dependencies
+  webpack: (config, { isServer, dev }) => {
+    // Create a stub file to avoid pino bundling
+    config.resolve.alias = {
+      ...config.resolve.alias,
+      pino: false,
+      'thread-stream': false,
+      'sonic-boom': false,
+    }
+
+    if (isServer) {
+      // Externalize pino for server since we don't use it in SSR
+      config.externals = config.externals || []
+      if (Array.isArray(config.externals)) {
+        config.externals.push(
+          'pino',
+          'thread-stream',
+          'sonic-boom',
+        )
+      }
+    } else {
+      // Client-side fallback for modules that don't exist
+      config.resolve.fallback = {
+        ...config.resolve.fallback,
+        pino: false,
+        'thread-stream': false,
+        'sonic-boom': false,
+        'desm': false,
+        'fastbench': false,
+        'tap': false,
+        'tape': false,
+        'why-is-node-running': false,
+      }
+    }
+    
+    return config
+  },
+
+  // Add turbopack config to suppress Turbopack + webpack warning
+  // The webpack config handles problematic dependencies, turbopack will be skipped
+  turbopack: {},
 }
 
 export default nextConfig

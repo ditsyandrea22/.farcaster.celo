@@ -11,26 +11,20 @@ import { ethers } from 'ethers'
 import { Loader2, AlertCircle, CheckCircle2 } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { Card } from '@/components/ui/card'
-import { registerDomainWithTransaction, estimateMintingGas, validateMintingParams, generateMetadataURI } from '@/lib/minting-service'
+import { completeMinutingFlow, estimateMintingGas } from '@/lib/minting-service'
 import { getFarcasterWalletProvider, switchToCeloMainnet } from '@/lib/farcaster-wallet'
 
 export interface MintTransactionHandlerProps {
-  domain: string
+  label: string  // username
   fid: number
-  username: string
-  bio: string
-  socialLinks?: string
   walletAddress: string
   onSuccess?: (txHash: string) => void
   onError?: (error: string) => void
 }
 
 export function MintTransactionHandler({
-  domain,
+  label,
   fid,
-  username,
-  bio,
-  socialLinks,
   walletAddress,
   onSuccess,
   onError,
@@ -51,23 +45,10 @@ export function MintTransactionHandler({
       setLoading(true)
       setTxStatus('pending')
 
-      // Validate minting parameters
-      const mintParams = {
-        domain,
-        bio,
-        socialLinks: socialLinks || '',
-        farcasterUsername: username,
-        fid,
-        walletAddress,
-        metadataURI: generateMetadataURI({ domain, bio, socialLinks, farcasterUsername: username, fid, walletAddress, metadataURI: '' }),
-      }
-
-      const validation = validateMintingParams(mintParams)
-      if (!validation.isValid) {
-        throw new Error(validation.errors.join(', '))
-      }
-
       console.log('[MintTxHandler] Starting minting transaction...')
+      console.log('[MintTxHandler] Label:', label)
+      console.log('[MintTxHandler] FID:', fid)
+      console.log('[MintTxHandler] Owner:', walletAddress)
 
       // Check and switch to Celo Mainnet
       try {
@@ -86,26 +67,34 @@ export function MintTransactionHandler({
 
       // Estimate gas
       console.log('[MintTxHandler] Estimating gas...')
-      const gasData = await estimateMintingGas(mintParams)
+      const gasData = await estimateMintingGas()
       setGasEstimate(gasData)
 
       // Get ethers signer dari wallet provider
       const provider = await getFarcasterWalletProvider()
-      
-      // Jika provider adalah raw EIP-1193, wrap dengan ethers BrowserProvider
       const ethersProvider = new ethers.BrowserProvider(provider)
       const signer = await ethersProvider.getSigner()
 
-      console.log('[MintTxHandler] Signer obtained, preparing transaction...')
+      console.log('[MintTxHandler] Signer obtained, starting mint flow...')
 
-      // Register domain dengan transaction
-      const result = await registerDomainWithTransaction(mintParams, signer)
+      // Complete minting flow (approval + mint)
+      const result = await completeMinutingFlow(
+        signer,
+        {
+          label,
+          fid,
+          owner: walletAddress,
+        },
+        {
+          useNativePayment: true,
+        }
+      )
 
-      if (result.success && result.transactionHash) {
-        setTxHash(result.transactionHash)
+      if (result.success && result.mintHash) {
+        setTxHash(result.mintHash)
         setTxStatus('success')
-        console.log('[MintTxHandler] Transaction successful!', result.transactionHash)
-        onSuccess?.(result.transactionHash)
+        console.log('[MintTxHandler] Transaction successful!', result.mintHash)
+        onSuccess?.(result.mintHash)
       } else {
         throw new Error(result.error || 'Transaction failed')
       }
@@ -209,9 +198,9 @@ export function MintTransactionHandler({
         </div>
 
         <div className="p-3 rounded-lg bg-muted space-y-2 text-sm">
-          <div><span className="text-muted-foreground">Domain:</span> <span className="font-mono font-semibold">{domain}.farcaster.celo</span></div>
-          <div><span className="text-muted-foreground">Owner:</span> <span className="font-mono font-semibold">{username}</span></div>
+          <div><span className="text-muted-foreground">Label:</span> <span className="font-mono font-semibold">{label}</span></div>
           <div><span className="text-muted-foreground">FID:</span> <span className="font-mono font-semibold">{fid}</span></div>
+          <div><span className="text-muted-foreground">Owner:</span> <span className="font-mono font-semibold text-xs break-all">{walletAddress}</span></div>
         </div>
 
         <Button

@@ -1,16 +1,29 @@
 import { createConfig, http } from "wagmi";
-import { farcasterMiniApp } from "@farcaster/miniapp-wagmi-connector";
-import { mainnet, base, optimism, celo } from "wagmi/chains";
+import { walletConnect } from "wagmi/connectors";
+import { celo } from "wagmi/chains";
 
+/**
+ * Wagmi config untuk Farcaster Mini App
+ * HANYA support Celo mainnet untuk .farcaster.celo domains
+ * Menggunakan WalletConnect connector untuk Farcaster built-in wallet
+ */
 export const wagmiConfig = createConfig({
-  chains: [mainnet, base, optimism, celo],
+  chains: [celo],
   connectors: [
-    farcasterMiniApp(),
+    walletConnect({
+      projectId: process.env.NEXT_PUBLIC_WC_PROJECT_ID || "",
+      metadata: {
+        name: "Farcaster Domain",
+        description: "Mint .farcaster.celo domain names on Celo",
+        url: typeof window !== 'undefined' ? window.location.origin : "",
+        icons: [
+          "https://farcaster-celo.vercel.app/logo-512-v2.png",
+        ],
+      },
+      showQrModal: true,
+    }),
   ],
   transports: {
-    [mainnet.id]: http(),
-    [base.id]: http(),
-    [optimism.id]: http(),
-    [celo.id]: http(),
+    [celo.id]: http(process.env.NEXT_PUBLIC_CELO_RPC_URL || "https://forno.celo.org"),
   },
 });

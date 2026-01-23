@@ -3,14 +3,13 @@
  */
 
 import { useEffect, useState } from 'react'
-import { isInMiniApp, getSupportedCapabilities } from '@/lib/farcaster-sdk'
+import { isInMiniApp } from '@/lib/farcaster-sdk'
 
 /**
- * Hook untuk check mini app context dan capabilities
+ * Hook untuk check mini app context
  */
 export function useFarcasterMiniApp() {
   const [inMiniApp, setInMiniApp] = useState(false)
-  const [capabilities, setCapabilities] = useState<string[]>([])
   const [loading, setLoading] = useState(true)
 
   useEffect(() => {
@@ -18,12 +17,7 @@ export function useFarcasterMiniApp() {
       try {
         const isMiniApp = isInMiniApp()
         setInMiniApp(isMiniApp)
-
-        if (isMiniApp) {
-          const caps = await getSupportedCapabilities()
-          setCapabilities(caps)
-          console.log('Supported capabilities:', caps)
-        }
+        console.log('Is in mini app:', isMiniApp)
       } catch (error) {
         console.error('Error checking mini app:', error)
       } finally {
@@ -37,18 +31,9 @@ export function useFarcasterMiniApp() {
     return () => clearTimeout(timeoutId)
   }, [])
 
-  const hasCapability = (capability: string) => {
-    return capabilities.includes(capability)
-  }
-
   return {
     inMiniApp,
-    capabilities,
     loading,
-    hasCapability,
-    canSignManifest: capabilities.includes('sign_manifest'),
-    canComposeCast: capabilities.includes('compose_cast'),
-    canAddMiniApp: capabilities.includes('add_mini_app'),
   }
 }
 

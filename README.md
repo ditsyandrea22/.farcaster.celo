@@ -4,11 +4,14 @@ A comprehensive Farcaster mini app for registering and managing .farcaster.celo 
 
 ## Features
 
+- **Auto-Connect Wallet**: Automatically connects wallet on page load
+- **Auto-Fetch FID**: Reads FID from Neynar API automatically when wallet connects
+- **Auto-Generate Domain**: Domain names auto-generated from Farcaster username or FID
 - **Domain Registration**: Search, claim, and register .farcaster.celo domains
-- **NFT Minting**: Automatically mint unique NFTs linked to your Farcaster identity
+- **NFT Minting**: Real blockchain transactions with wallet popup for on-chain minting
 - **OpenSea Integration**: View and trade your domain NFTs on OpenSea
 - **Real Blockchain Data**: Uses actual Celo mainnet transactions and Neynar API data
-- **Gas Estimation**: Real-time gas price display and cost estimation (~$0.25 USD)
+- **Gas Estimation**: Real-time gas price display and cost estimation
 - **Farcaster Integration**: Full frame wallet support for transactions
 - **Profile Management**: Store bio and social links in NFT metadata
 
@@ -28,6 +31,7 @@ A comprehensive Farcaster mini app for registering and managing .farcaster.celo 
 - Node.js 18+
 - Farcaster frame wallet
 - Celo mainnet RPC access
+- Neynar API key
 
 ### Installation
 
@@ -48,18 +52,24 @@ cp env.example .env.local
 Create a `.env.local` file with:
 
 ```env
+# Farcaster
 NEXT_PUBLIC_FARCASTER_FRAME_URL=https://your-domain.com
 FARCASTER_HUB_URL=https://hub-api.neynar.com
-NEYNAR_API_KEY=your_api_key
+NEYNAR_API_KEY=your_neynar_api_key
+NEXT_PUBLIC_NEYNAR_API_KEY=your_neynar_api_key
 
+# Celo Blockchain
 NEXT_PUBLIC_CELO_RPC_URL=https://forno.celo.org
 NEXT_PUBLIC_CELO_CHAIN_ID=42220
 NEXT_PUBLIC_CELO_CONTRACT_ADDRESS=0x...
 
+# NFT & Metadata
 NEXT_PUBLIC_NFT_METADATA_BASE_URL=https://your-domain.com/api/metadata
 NEXT_PUBLIC_OPENSEA_URL=https://opensea.io/collection/farcaster-names
+NEXT_PUBLIC_BASE_URL=https://your-domain.com
 
-NEXT_PUBLIC_GAS_PRICE_GWEI=0.25
+# Gas & Fees
+NEXT_PUBLIC_GAS_PRICE_GWEI=1
 NEXT_PUBLIC_REGISTRATION_FEE_USD=0.25
 ```
 
@@ -70,6 +80,46 @@ npm run dev
 ```
 
 Open [http://localhost:3000](http://localhost:3000) in your browser.
+
+## How It Works
+
+### 1. Wallet Connection & FID Auto-Fetch
+- User visits the app and connects their Farcaster frame wallet
+- System automatically reads FID from Neynar API
+- Wallet address is automatically set for transactions
+
+### 2. Auto-Domain Generation
+- Domain name is automatically generated from:
+  - Farcaster username (sanitized)
+  - Fallback to FID-based domain (e.g., `fid123`)
+- User can customize the domain before registration
+
+### 3. Registration Flow
+- Fill in bio and optional social links
+- System validates all data
+- Prepare transaction with NFT metadata
+
+### 4. Minting with Wallet Popup
+- Click "Sign & Mint NFT" button
+- Wallet popup appears for transaction confirmation
+- Sign transaction with your frame wallet
+- Real blockchain transaction on Celo mainnet
+- NFT automatically available on OpenSea
+
+## New Files & Components
+
+### Services
+- **`lib/neynar-service.ts`**: Comprehensive Neynar API integration
+- **`lib/minting-service.ts`**: Real blockchain minting transactions
+- **`lib/domain-generator.ts`**: Domain name generation and validation
+
+### Hooks
+- **`hooks/use-farcaster-auto-mint.ts`**: Auto-connect and FID fetching hook
+
+### Components
+- **`components/MintTransactionHandler.tsx`**: Real transaction handler with wallet popup
+- **Updated `components/RegistrationForm.tsx`**: Auto-fill FID and domain
+- **Updated `components/WalletStatus.tsx`**: Auto-fetch Farcaster data
 
 ## Project Structure
 
@@ -82,18 +132,23 @@ Open [http://localhost:3000](http://localhost:3000) in your browser.
 │   └── page.tsx          # Main page
 ├── components/
 │   ├── DomainSearch.tsx  # Domain availability search
-│   ├── RegistrationForm.tsx # Registration form
+│   ├── RegistrationForm.tsx # Auto-fill registration form
+│   ├── MintTransactionHandler.tsx # Real minting with wallet popup
 │   ├── NFTGallery.tsx    # NFT display gallery
-│   ├── WalletStatus.tsx  # Wallet connection status
+│   ├── WalletStatus.tsx  # Auto-connect wallet & FID fetch
 │   └── Logo.tsx          # App logo
+├── hooks/
+│   └── use-farcaster-auto-mint.ts # Auto-mint hook
 ├── lib/
 │   ├── types.ts          # TypeScript interfaces
 │   ├── blockchain.ts     # Celo blockchain utilities
-│   └── farcaster.ts      # Farcaster/Neynar utilities
+│   ├── farcaster.ts      # Farcaster utilities
+│   ├── neynar-service.ts # Neynar API service
+│   ├── minting-service.ts # Real minting service
+│   └── domain-generator.ts # Domain generation
 ├── public/
 │   ├── manifest.json     # PWA manifest
 │   ├── farcaster.json    # Farcaster frame config
-│   ├── logo-*.png        # App logos
 │   └── NameRegistry.json # Smart contract ABI
 └── env.example           # Environment template
 ```

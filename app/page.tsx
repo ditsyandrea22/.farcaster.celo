@@ -5,12 +5,19 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs'
 import { Card } from '@/components/ui/card'
 import { Logo } from '@/components/Logo'
 import { DomainSearch } from '@/components/DomainSearch'
-import { RegistrationForm, type RegistrationData } from '@/components/RegistrationForm'
+import { RegistrationForm } from '@/components/RegistrationForm'
 import { MintTransactionHandler } from '@/components/MintTransactionHandler'
 import { NFTGallery } from '@/components/NFTGallery'
 import { WalletStatus } from '@/components/WalletStatus'
 import { Code, FileText, Network, Zap } from 'lucide-react'
 import type { GasEstimate } from '@/lib/types'
+
+// Registration data type
+interface RegistrationData {
+  label: string
+  fid: number
+  owner: string
+}
 
 export default function Home() {
   const [selectedDomain, setSelectedDomain] = useState<string | null>(null)
@@ -133,11 +140,8 @@ export default function Home() {
                     <div className="pt-6 border-t border-border">
                       <h3 className="font-semibold mb-4">Complete Registration</h3>
                       <RegistrationForm
-                        domain={selectedDomain}
                         onSubmit={handleRegistration}
                         gasEstimate={gasEstimate}
-                        autoMint={false}
-                        walletAddress={walletAddress}
                       />
                     </div>
                   )}
@@ -150,11 +154,8 @@ export default function Home() {
                     <div>
                       <h3 className="font-semibold mb-4">Mint Your NFT Domain</h3>
                       <MintTransactionHandler
-                        domain={registrationData.domain}
-                        fid={registrationData.farcasterFid}
-                        username={registrationData.farcasterUsername}
-                        bio={registrationData.bio}
-                        socialLinks={registrationData.socialLinks}
+                        label={registrationData.label}
+                        fid={registrationData.fid}
                         walletAddress={walletAddress}
                         onSuccess={handleMintSuccess}
                       />

@@ -1,100 +1,29 @@
 {
   "name": "Farcaster Celo Names",
   "short_name": "Names",
-  "homeUrl": "https://farcaster-celo.vercel.app/",
-  "iconUrl": "https://farcaster-celo.vercel.app/icon.png",
-  "imageUrl": "https://farcaster-celo.vercel.app/embed.png",
-  "description": "Register and manage .farcaster.celo domain names with NFT functionality on Celo mainnet",
-  "splashImageUrl": "/hero-logo.png",
-  "splashBackgroundColor": "#000000",
+  "description": "Register and manage .farcaster.celo domain names on Celo mainnet",
   "start_url": "/",
   "scope": "/",
   "display": "standalone",
-  "orientation": "portrait-primary",
-  "dir": "ltr",
-  "lang": "en",
   "background_color": "#000000",
   "theme_color": "#8A63D2",
-  "categories": ["productivity", "utilities"],
-  "web_app_capable": true,
-  "mobile_web_app_capable": true,
-  "apple_mobile_web_app_capable": true,
-  "status_bar_style": "black-translucent",
-  "viewport_fit": "cover",
+  "orientation": "portrait",
   "icons": [
     {
       "src": "/logo-192-v2.png",
       "sizes": "192x192",
-      "type": "image/png",
-      "purpose": "any"
+      "type": "image/png"
     },
     {
       "src": "/logo-512-v2.png",
       "sizes": "512x512",
-      "type": "image/png",
-      "purpose": "any"
+      "type": "image/png"
     },
     {
-      "src": "/hero-logo.png",
-      "sizes": "1200x400",
+      "src": "/logo-512-v2.png",
+      "sizes": "512x512",
       "type": "image/png",
       "purpose": "maskable"
-    }
-  ],
-  "screenshots": [
-    {
-      "src": "/logo-512-v2.png",
-      "sizes": "512x512",
-      "type": "image/png",
-      "form_factor": "narrow"
-    },
-    {
-      "src": "/logo-512-v2.png",
-      "sizes": "1024x1024",
-      "type": "image/png",
-      "form_factor": "wide"
-    }
-  ],
-  "prefer_related_applications": false,
-  "shortcuts": [
-    {
-      "name": "Search Domains",
-      "short_name": "Search",
-      "description": "Search for available domains",
-      "url": "/?tab=search",
-      "icons": [
-        {
-          "src": "/logo-192-v2.png",
-          "sizes": "192x192",
-          "type": "image/png"
-        }
-      ]
-    },
-    {
-      "name": "Register Domain",
-      "short_name": "Register",
-      "description": "Register a new domain",
-      "url": "/?tab=register",
-      "icons": [
-        {
-          "src": "/logo-192-v2.png",
-          "sizes": "192x192",
-          "type": "image/png"
-        }
-      ]
-    },
-    {
-      "name": "My Domains",
-      "short_name": "Domains",
-      "description": "View your registered domains",
-      "url": "/?tab=gallery",
-      "icons": [
-        {
-          "src": "/logo-192-v2.png",
-          "sizes": "192x192",
-          "type": "image/png"
-        }
-      ]
     }
   ]
 }

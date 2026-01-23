@@ -2,11 +2,9 @@ import React from "react"
 import type { Metadata, Viewport } from 'next'
 import { Geist, Geist_Mono } from 'next/font/google'
 import { Analytics } from '@vercel/analytics/next'
-import { WalletProvider } from '@/components/wallet-provider'
 import './globals.css'
 import { FarcasterReady } from "@/components/FarcasterReady"
-import { FarcasterSDKProvider } from "@/components/farcaster-sdk-provider"
-import { ReactQueryProvider } from "@/components/react-query-provider"
+import { ClientProviders } from "@/components/client-providers"
 
 const _geist = Geist({ subsets: ["latin"] });
 const _geistMono = Geist_Mono({ subsets: ["latin"] });
@@ -118,13 +116,9 @@ export default function RootLayout({
       <body className={`font-sans antialiased`}>
         {/* FarcasterReady signals to Warpcast that the app has finished loading */}
         <FarcasterReady />
-        <ReactQueryProvider>
-          <WalletProvider>
-            <FarcasterSDKProvider>
-              {children}
-            </FarcasterSDKProvider>
-          </WalletProvider>
-        </ReactQueryProvider>
+        <ClientProviders>
+          {children}
+        </ClientProviders>
         <Analytics />
       </body>
     </html>

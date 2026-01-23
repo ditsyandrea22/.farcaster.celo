@@ -7,7 +7,6 @@
 import { sdk } from "@farcaster/frame-sdk";
 
 let sdkInitialized = false;
-let isInMiniAppContext = false;
 
 /**
  * Check if the app is running in a Farcaster mini app context
@@ -18,11 +17,27 @@ export function isInMiniApp(): boolean {
   }
 
   try {
-    // The SDK from @farcaster/frame-sdk checks this automatically
-    return sdk.context !== undefined;
+    // SDK is available in mini app context
+    return sdk !== undefined;
   } catch (error) {
     console.warn('Error checking mini app context:', error);
     return false;
+  }
+}
+
+/**
+ * Get current Farcaster context
+ * Contains user data, but may be undefined if not in mini app
+ */
+export async function getFarcasterContext() {
+  try {
+    if (!sdk) {
+      return null;
+    }
+    return sdk.context;
+  } catch (error) {
+    console.error('Error getting context:', error);
+    return null;
   }
 }
 
@@ -33,7 +48,6 @@ export function isInMiniApp(): boolean {
  */
 export async function notifyAppReady(): Promise<void> {
   try {
-    // Call sdk.actions.ready() to signal app initialization complete
     if (sdk?.actions?.ready) {
       console.log('[SDK] Calling sdk.actions.ready()');
       await sdk.actions.ready();
@@ -49,7 +63,7 @@ export async function notifyAppReady(): Promise<void> {
 
 /**
  * Initialize the Farcaster SDK
- * Call this as early as possible in your app lifecycle
+ * Call this as early as possible in your app lifecycle (e.g., in layout.tsx)
  */
 export async function initializeFarcasterSDK(): Promise<void> {
   if (sdkInitialized) {
@@ -64,6 +78,7 @@ export async function initializeFarcasterSDK(): Promise<void> {
     // Initialize SDK and call ready immediately
     await notifyAppReady();
     sdkInitialized = true;
+    console.log('[SDK] Farcaster SDK initialized');
   } catch (error) {
     console.error('[SDK] Error initializing Farcaster SDK:', error);
     sdkInitialized = true;
@@ -71,30 +86,15 @@ export async function initializeFarcasterSDK(): Promise<void> {
 }
 
 /**
- * Check if a capability is supported
- * See: https://miniapps.farcaster.xyz/docs/sdk/detecting-capabilities
+ * Safe wrapper untuk get context dengan error handling
  */
-export async function isCapabilitySupported(capability: string): Promise<boolean> {
+export async function getSafeContext() {
   try {
-    // getCapabilities is not available in the SDK
-    console.warn(`Capability detection not available for "${capability}"`);
-    return false;
+    const context = await getFarcasterContext();
+    return context;
   } catch (error) {
-    console.warn(`Error checking capability "${capability}":`, error);
-    return false;
-  }
-}
-
-/**
- * Get all supported capabilities
- */
-export async function getSupportedCapabilities(): Promise<string[]> {
-  try {
-    // getCapabilities is not available in the SDK
-    return [];
-  } catch (error) {
-    console.warn('Error getting capabilities:', error);
-    return [];
+    console.error('[SDK] Error getting safe context:', error);
+    return null;
   }
 }
 
@@ -136,24 +136,3 @@ export async function closeMiniApp(): Promise<void> {
     console.error('[SDK] Error closing mini app:', error);
   }
 }
-
-/**
- * Sign a manifest for authentication
- * Note: signManifest is not available in the current SDK version
- * Consider using alternative authentication methods
- */
-export async function signManifest(manifest: {
-  domain: string;
-  timestamp: number;
-  signature?: string;
-}): Promise<string | null> {
-  try {
-    console.warn('[SDK] signManifest is not available in the current SDK version');
-    return null;
-  } catch (error) {
-    console.error('[SDK] Error signing manifest:', error);
-    return null;
-  }
-}
-
-export { isInMiniAppContext };
