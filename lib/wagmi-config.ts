@@ -10,11 +10,17 @@ import { celo } from "wagmi/chains";
 export const wagmiConfig = createConfig({
   chains: [celo],
   connectors: [
-    // Prioritas 1: Injected wallet (MetaMask, Coinbase Wallet, dll di Farcaster Mini App)
-    injected({
-      target: 'metaMask',
+    // Prioritas 1: Coinbase Wallet (reliable in all contexts)
+    coinbaseWallet({
+      appName: "Farcaster Domain",
+      appLogoUrl: "https://farcaster-celo.vercel.app/logo-512-v2.png",
     }),
-    // Prioritas 2: WalletConnect dengan konfigurasi yang lebih robust
+    // Prioritas 2: Injected wallet (single instance for all providers)
+    injected({
+      target: undefined, // Accept all injected wallets
+      shimDisconnect: true,
+    }),
+    // Prioritas 3: WalletConnect
     walletConnect({
       projectId: process.env.NEXT_PUBLIC_WC_PROJECT_ID || "",
       metadata: {
@@ -25,17 +31,12 @@ export const wagmiConfig = createConfig({
           "https://farcaster-celo.vercel.app/logo-512-v2.png",
         ],
       },
-      showQrModal: false, // Disable QR modal di mini app context
+      showQrModal: true,
       qrModalOptions: {
         themeMode: 'dark',
       },
       // Mark chains as fresh to avoid unnecessary reconnections
       isNewChainsStale: false,
-    }),
-    // Prioritas 3: Coinbase Wallet
-    coinbaseWallet({
-      appName: "Farcaster Domain",
-      appLogoUrl: "https://farcaster-celo.vercel.app/logo-512-v2.png",
     }),
   ],
   transports: {

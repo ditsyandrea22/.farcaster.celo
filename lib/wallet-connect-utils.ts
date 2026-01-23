@@ -104,32 +104,40 @@ export function getConnectorRecommendation(isMiniApp: boolean, hasInjected: bool
 export class ConnectionMonitor {
   private failureCount = 0
   private maxFailures = 3
-  private connectionAttempts = 0
-  private maxAttempts = 5
+  private lastFailureTime = 0
   
   recordFailure() {
     this.failureCount++
-    this.connectionAttempts++
+    this.lastFailureTime = Date.now()
     console.log(`[ConnectionMonitor] Failure #${this.failureCount}/${this.maxFailures}`)
   }
   
   recordSuccess() {
     this.failureCount = 0
-    this.connectionAttempts = 0
+    this.lastFailureTime = 0
     console.log('[ConnectionMonitor] Connection successful - resetting failure count')
   }
   
   isExhausted(): boolean {
-    return this.connectionAttempts >= this.maxAttempts
+    return this.failureCount > this.maxFailures
   }
   
   shouldRetry(): boolean {
-    return !this.isExhausted() && this.failureCount <= this.maxFailures
+    if (this.isExhausted()) {
+      console.log('[ConnectionMonitor] Max retries exceeded - no more attempts')
+      return false
+    }
+    const timeSinceLastFailure = Date.now() - this.lastFailureTime
+    return timeSinceLastFailure >= 2000 // Enforce 2s min between retries
+  }
+  
+  getFailureCount(): number {
+    return this.failureCount
   }
   
   reset() {
     this.failureCount = 0
-    this.connectionAttempts = 0
+    this.lastFailureTime = 0
   }
 }
 

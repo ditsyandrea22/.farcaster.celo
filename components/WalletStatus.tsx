@@ -56,15 +56,18 @@ export function WalletStatus({
     const maxRetries = 3
     let retryCount = 0
     const retryTimer = setInterval(() => {
-      // If we're not connected and no error is preventing connection, try again
+      // Only retry if not exhausted and enough time passed
       if (!isConnected && error && retryCount < maxRetries) {
-        console.log(`[WalletStatus] Retrying connection (attempt ${retryCount + 1}/${maxRetries})`)
-        retryCount++
-        setError(null)
+        if (connectionMonitorRef.current.shouldRetry()) {
+          console.log(`[WalletStatus] Retrying connection (attempt ${retryCount + 1}/${maxRetries})`)
+          retryCount++
+          setError(null)
+          handleConnect()
+        }
       } else {
         clearInterval(retryTimer)
       }
-    }, 5000) // Retry every 5 seconds
+    }, 2000) // Check every 2 seconds
     
     return () => clearInterval(retryTimer)
   }, [isConnected, error])
@@ -121,38 +124,40 @@ export function WalletStatus({
     try {
       setError(null)
       
-      // Check if we're in Farcaster Mini App
-      const isMiniApp = (window as any).farcaster?.context !== undefined
+      // Check if already exhausted
+      if (connectionMonitorRef.current.isExhausted()) {
+        const msg = 'Connection failed. Please refresh the page and try again.'
+        setError(msg)
+        console.error('[WalletStatus]', msg)
+        return
+      }
       
-      if (connectors.length > 0) {
-        // Prioritize injected connector dalam mini app context
-        let selectedConnector = connectors[0]
-        
-        if (isMiniApp && connectors.length > 1) {
-          // Find injected connector first (usually available in mini app)
-          const injectedConnector = connectors.find(c => c.name === 'MetaMask' || c.name === 'Injected')
-          if (injectedConnector) {
-            selectedConnector = injectedConnector
-          }
-        }
-        
-        console.log('[WalletStatus] Attempting connection with:', selectedConnector.name)
-        console.log('[WalletStatus] Mini App context detected:', isMiniApp)
-        console.log('[WalletStatus] Available connectors:', connectors.map(c => c.name).join(', '))
-        
-        setLastConnectorAttempt(selectedConnector.name)
-        connectionMonitorRef.current.recordFailure()
-        
-        connect({ connector: selectedConnector })
-        
-        // Give connection time to establish
-        await new Promise(resolve => setTimeout(resolve, 1500))
-        
-        if (onConnect) {
+      if (connectors.length === 0) {
+        setError('No wallet connectors available')
+        return
+      }
+      
+      // Use first connector (already prioritized in wagmi-config)
+      const selectedConnector = connectors[0]
+      
+      console.log('[WalletStatus] Attempting connection with:', selectedConnector.name)
+      console.log('[WalletStatus] Available connectors:', connectors.map(c => c.name).join(', '))
+      
+      setLastConnectorAttempt(selectedConnector.name)
+      connectionMonitorRef.current.recordFailure()
+      
+      // Trigger connection
+      connect({ connector: selectedConnector })
+      
+      // Wait for connection to establish
+      await new Promise(resolve => setTimeout(resolve, 2500))
+      
+      if (onConnect) {
+        try {
           await onConnect()
+        } catch (err) {
+          console.warn('[WalletStatus] onConnect callback error:', err)
         }
-      } else {
-        setError('No wallet connectors available. Make sure you have a wallet installed.')
       }
     } catch (err) {
       console.error('[WalletStatus] Failed to connect wallet:', err)
