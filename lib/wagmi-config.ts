@@ -1,15 +1,20 @@
 import { createConfig, http } from "wagmi";
-import { walletConnect } from "wagmi/connectors";
+import { walletConnect, injected, coinbaseWallet } from "wagmi/connectors";
 import { celo } from "wagmi/chains";
 
 /**
  * Wagmi config untuk Farcaster Mini App
  * HANYA support Celo mainnet untuk .farcaster.celo domains
- * Menggunakan WalletConnect connector untuk Farcaster built-in wallet
+ * Menggunakan multiple connectors: Injected (built-in), WalletConnect, dan Coinbase
  */
 export const wagmiConfig = createConfig({
   chains: [celo],
   connectors: [
+    // Prioritas 1: Injected wallet (MetaMask, Coinbase Wallet, dll di Farcaster Mini App)
+    injected({
+      target: 'metaMask',
+    }),
+    // Prioritas 2: WalletConnect dengan konfigurasi yang lebih robust
     walletConnect({
       projectId: process.env.NEXT_PUBLIC_WC_PROJECT_ID || "",
       metadata: {
@@ -20,7 +25,17 @@ export const wagmiConfig = createConfig({
           "https://farcaster-celo.vercel.app/logo-512-v2.png",
         ],
       },
-      showQrModal: true,
+      showQrModal: false, // Disable QR modal di mini app context
+      qrModalOptions: {
+        themeMode: 'dark',
+      },
+      // Mark chains as fresh to avoid unnecessary reconnections
+      isNewChainsStale: false,
+    }),
+    // Prioritas 3: Coinbase Wallet
+    coinbaseWallet({
+      appName: "Farcaster Domain",
+      appLogoUrl: "https://farcaster-celo.vercel.app/logo-512-v2.png",
     }),
   ],
   transports: {

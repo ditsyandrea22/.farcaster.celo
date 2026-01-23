@@ -1,6 +1,6 @@
 'use client'
 
-import { useState, useEffect } from 'react'
+import { useState, useEffect, useRef } from 'react'
 import { Wallet, AlertCircle, Zap, Activity, CheckCircle2 } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { Card } from '@/components/ui/card'
@@ -9,6 +9,7 @@ import { useAccount, useConnect, useDisconnect, useBalance } from 'wagmi'
 import { formatAddress } from '@/lib/blockchain'
 import { isInMiniApp } from '@/lib/farcaster-sdk'
 import { getAuthenticatedUserInfo } from '@/lib/neynar-service'
+import { ConnectionMonitor, formatWalletError } from '@/lib/wallet-connect-utils'
 
 interface WalletStatusProps {
   address?: string
@@ -37,6 +38,8 @@ export function WalletStatus({
   const [walletAvailable, setWalletAvailable] = useState(false)
   const [farcasterData, setFarcasterData] = useState<any>(null)
   const [fetchingFarcasterData, setFetchingFarcasterData] = useState(false)
+  const [lastConnectorAttempt, setLastConnectorAttempt] = useState<string | null>(null)
+  const connectionMonitorRef = useRef(new ConnectionMonitor())
 
   // Initialize mini app status
   useEffect(() => {
@@ -47,6 +50,24 @@ export function WalletStatus({
       setWalletAvailable(!!window.ethereum)
     }
   }, [])
+
+  // Retry connection if it fails
+  useEffect(() => {
+    const maxRetries = 3
+    let retryCount = 0
+    const retryTimer = setInterval(() => {
+      // If we're not connected and no error is preventing connection, try again
+      if (!isConnected && error && retryCount < maxRetries) {
+        console.log(`[WalletStatus] Retrying connection (attempt ${retryCount + 1}/${maxRetries})`)
+        retryCount++
+        setError(null)
+      } else {
+        clearInterval(retryTimer)
+      }
+    }, 5000) // Retry every 5 seconds
+    
+    return () => clearInterval(retryTimer)
+  }, [isConnected, error])
 
   // Auto-fetch Farcaster data saat wallet terkoneksi
   useEffect(() => {
@@ -66,6 +87,7 @@ export function WalletStatus({
             const userData = await getAuthenticatedUserInfo(fid)
             if (userData) {
               setFarcasterData(userData)
+              connectionMonitorRef.current.recordSuccess()
               console.log('[WalletStatus] Farcaster data fetched:', userData)
             }
           }
@@ -98,18 +120,45 @@ export function WalletStatus({
   const handleConnect = async () => {
     try {
       setError(null)
+      
+      // Check if we're in Farcaster Mini App
+      const isMiniApp = (window as any).farcaster?.context !== undefined
+      
       if (connectors.length > 0) {
-        console.log('[WalletStatus] Connecting with connector:', connectors[0].name)
-        connect({ connector: connectors[0] })
+        // Prioritize injected connector dalam mini app context
+        let selectedConnector = connectors[0]
+        
+        if (isMiniApp && connectors.length > 1) {
+          // Find injected connector first (usually available in mini app)
+          const injectedConnector = connectors.find(c => c.name === 'MetaMask' || c.name === 'Injected')
+          if (injectedConnector) {
+            selectedConnector = injectedConnector
+          }
+        }
+        
+        console.log('[WalletStatus] Attempting connection with:', selectedConnector.name)
+        console.log('[WalletStatus] Mini App context detected:', isMiniApp)
+        console.log('[WalletStatus] Available connectors:', connectors.map(c => c.name).join(', '))
+        
+        setLastConnectorAttempt(selectedConnector.name)
+        connectionMonitorRef.current.recordFailure()
+        
+        connect({ connector: selectedConnector })
+        
+        // Give connection time to establish
+        await new Promise(resolve => setTimeout(resolve, 1500))
+        
         if (onConnect) {
           await onConnect()
         }
       } else {
-        setError('No wallet connectors available')
+        setError('No wallet connectors available. Make sure you have a wallet installed.')
       }
     } catch (err) {
       console.error('[WalletStatus] Failed to connect wallet:', err)
-      setError('Failed to connect wallet. Please try again.')
+      const errorMsg = formatWalletError(err)
+      setError(errorMsg)
+      connectionMonitorRef.current.recordFailure()
     }
   }
 
@@ -194,6 +243,11 @@ export function WalletStatus({
             <div className="flex-1">
               <p className="text-sm text-destructive font-medium">Connection Error</p>
               <p className="text-xs text-destructive/80 mt-1">{error}</p>
+              {lastConnectorAttempt && (
+                <p className="text-xs text-destructive/60 mt-2">
+                  Attempted with: <span className="font-mono">{lastConnectorAttempt}</span>
+                </p>
+              )}
             </div>
           </div>
         </Card>
