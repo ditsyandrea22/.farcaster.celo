@@ -15,7 +15,9 @@ const CELO_RPC_URL = process.env.NEXT_PUBLIC_CELO_RPC_URL || 'https://forno.celo
 
 // Domain Configuration
 const DOMAIN_TLD = 'farcaster.celo'
-const MINT_PRICE_WEI = process.env.NEXT_PUBLIC_MINT_PRICE_WEI || '1000000000000000000' // 1 CELO in wei
+// Default: 0.01 CELO (10000000000000000 wei) - leaves plenty for gas
+// Override via NEXT_PUBLIC_MINT_PRICE_WEI env var
+const MINT_PRICE_WEI = process.env.NEXT_PUBLIC_MINT_PRICE_WEI || '10000000000000000'
 
 export interface MintingParams {
   label: string // username (e.g., "vina")
@@ -60,11 +62,31 @@ export async function checkUserBalance(
 }> {
   try {
     if (!tokenAddress) {
-      console.warn('[Minting] Fee token not configured, assuming native CELO payment')
+      // For native CELO payment, check native balance with gas buffer
+      console.log('[Minting] Checking native CELO balance...')
+      const provider = new ethers.JsonRpcProvider(CELO_RPC_URL, {
+        chainId: CELO_CHAIN_ID,
+        name: 'celo-mainnet',
+      })
+      
+      const balance = await provider.getBalance(walletAddress)
+      const balanceDecimal = ethers.formatEther(balance)
+      
+      // Need: mint price + gas (estimate ~50k gas * gasPrice)
+      // With typical 1 gwei gas price on Celo, that's ~0.05 CELO
+      // So we need mint price + 0.1 CELO buffer
+      const GAS_BUFFER = ethers.parseEther('0.1')
+      const TOTAL_NEEDED = BigInt(MINT_PRICE_WEI) + GAS_BUFFER
+      const sufficient = balance >= TOTAL_NEEDED
+      
+      console.log('[Minting] Native balance:', balanceDecimal, 'CELO')
+      console.log('[Minting] Required (price + gas buffer):', ethers.formatEther(TOTAL_NEEDED), 'CELO')
+      console.log('[Minting] Sufficient:', sufficient)
+      
       return {
-        balance: '0',
-        balanceDecimal: '0',
-        sufficient: true, // assume native payment is ok
+        balance: balance.toString(),
+        balanceDecimal,
+        sufficient,
       }
     }
 
@@ -215,9 +237,20 @@ export async function mintDomain(
   } catch (error) {
     const errorMsg = error instanceof Error ? error.message : 'Unknown error'
     console.error('[Minting] Mint error:', errorMsg)
+    
+    // Parse and improve error messages
+    let userFriendlyError = errorMsg
+    if (errorMsg.includes('insufficient funds')) {
+      userFriendlyError = `Insufficient funds. You need ${ethers.formatEther(BigInt(MINT_PRICE_WEI))} CELO plus gas fees. Please check your wallet balance.`
+    } else if (errorMsg.includes('insufficient balance')) {
+      userFriendlyError = `Insufficient balance for transaction. Need more CELO in your wallet.`
+    } else if (errorMsg.includes('revert')) {
+      userFriendlyError = 'Transaction reverted. Please check your parameters and try again.'
+    }
+    
     return {
       success: false,
-      error: errorMsg,
+      error: userFriendlyError,
     }
   }
 }
