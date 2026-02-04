@@ -16,7 +16,6 @@ import { getFarcasterWalletProvider, switchToCeloMainnet } from '@/lib/farcaster
 
 export interface MintTransactionHandlerProps {
   label: string  // username
-  fid: number
   walletAddress: string
   onSuccess?: (txHash: string) => void
   onError?: (error: string) => void
@@ -24,7 +23,6 @@ export interface MintTransactionHandlerProps {
 
 export function MintTransactionHandler({
   label,
-  fid,
   walletAddress,
   onSuccess,
   onError,
@@ -47,7 +45,6 @@ export function MintTransactionHandler({
 
       console.log('[MintTxHandler] Starting minting transaction...')
       console.log('[MintTxHandler] Label:', label)
-      console.log('[MintTxHandler] FID:', fid)
       console.log('[MintTxHandler] Owner:', walletAddress)
 
       // IMPORTANT: Switch to Celo Mainnet FIRST before creating signer
@@ -80,7 +77,6 @@ export function MintTransactionHandler({
         signer,
         {
           label,
-          fid,
           owner: walletAddress,
         },
         {
@@ -197,7 +193,6 @@ export function MintTransactionHandler({
 
         <div className="p-3 rounded-lg bg-muted space-y-2 text-sm">
           <div><span className="text-muted-foreground">Label:</span> <span className="font-mono font-semibold">{label}</span></div>
-          <div><span className="text-muted-foreground">FID:</span> <span className="font-mono font-semibold">{fid}</span></div>
           <div><span className="text-muted-foreground">Owner:</span> <span className="font-mono font-semibold text-xs break-all">{walletAddress}</span></div>
         </div>
 
