@@ -172,8 +172,6 @@ export function MintModal({ isOpen, onClose, domain, onSuccess }: MintModalProps
       if (onSuccess) {
         onSuccess(result.mintHash || '')
       }
-
-      setBio('')
     } catch (err) {
       const errorMsg = err instanceof Error ? err.message : 'Mint transaction failed'
       console.error('[MintModal] Error:', errorMsg)
