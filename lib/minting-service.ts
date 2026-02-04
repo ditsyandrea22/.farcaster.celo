@@ -219,7 +219,11 @@ export async function mintDomain(
 
     // Preflight static call to surface revert reasons if any (helps debug missing revert data)
     try {
-      await contract.registerDomain.staticCall(fullDomain, params.bio || '', params.socialLinks || '')
+      const fn = contract.getFunction('registerDomain')
+      if (!fn) {
+        throw new Error('registerDomain function not found in contract ABI')
+      }
+      await fn.staticCall(fullDomain, params.bio || '', params.socialLinks || '')
     } catch (staticErr) {
       const staticMsg = staticErr instanceof Error ? staticErr.message : String(staticErr)
       console.error('[Minting] Preflight registerDomain call failed:', staticMsg)
@@ -227,7 +231,8 @@ export async function mintDomain(
       throw new Error(staticMsg)
     }
 
-    const tx = await contract.registerDomain(fullDomain, params.bio || '', params.socialLinks || '', txOptions)
+    // Make the actual transaction
+    const tx = await contract.getFunction('registerDomain')(fullDomain, params.bio || '', params.socialLinks || '', txOptions)
 
     console.log('[Minting] Register tx sent:', tx.hash)
 
