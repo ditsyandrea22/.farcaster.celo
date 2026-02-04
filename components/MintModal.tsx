@@ -34,8 +34,6 @@ export function MintModal({ isOpen, onClose, domain, onSuccess }: MintModalProps
   const { address: walletAddress, isConnected: walletConnected } = useAccount()
   const { data: walletClient } = useWalletClient()
 
-  const [fid, setFid] = useState<string>('')
-  const [fidInputFocused, setFidInputFocused] = useState(false)
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState<string | null>(null)
   const [success, setSuccess] = useState(false)
@@ -74,17 +72,6 @@ export function MintModal({ isOpen, onClose, domain, onSuccess }: MintModalProps
     setError(null)
     setSuccess(false)
 
-    if (!fid.trim()) {
-      setError('Farcaster ID is required')
-      return
-    }
-
-    const fidNumber = parseInt(fid, 10)
-    if (isNaN(fidNumber) || fidNumber <= 0) {
-      setError('Please enter a valid Farcaster ID (positive number)')
-      return
-    }
-
     if (!walletConnected || !walletAddress) {
       setError('Wallet not connected')
       return
@@ -107,7 +94,7 @@ export function MintModal({ isOpen, onClose, domain, onSuccess }: MintModalProps
 
       const mintParams = {
         label,
-        fid: fidNumber,
+        fid: 0, // No FID required - use 0
         owner: walletAddress,
         bio: '', // Empty bio - simpler mint process
         socialLinks: '',
@@ -168,14 +155,10 @@ export function MintModal({ isOpen, onClose, domain, onSuccess }: MintModalProps
       // Provide user-friendly error messages
       let userMessage = errorMsg
       
-      if (errorMsg.includes('FidAlreadyRegistered') || errorMsg.includes('already registered')) {
-        userMessage = `FID ${fid} is already registered. This FID can only be minted once. Please try a different FID.`
-      } else if (errorMsg.includes('DomainNotAvailable') || errorMsg.includes('not available')) {
+      if (errorMsg.includes('DomainNotAvailable') || errorMsg.includes('not available')) {
         userMessage = `The domain "${domain}" is not available. It may already be claimed.`
       } else if (errorMsg.includes('InsufficientFunds') || errorMsg.includes('insufficient')) {
         userMessage = 'Insufficient CELO balance. Please ensure you have enough CELO for the mint price and gas fees.'
-      } else if (errorMsg.includes('InvalidFarcasterFid')) {
-        userMessage = 'Invalid Farcaster ID. Please check your Farcaster account.'
       } else if (errorMsg.includes('revert') || errorMsg.includes('CALL_EXCEPTION')) {
         userMessage = 'Transaction failed. This could be due to contract issues or invalid parameters. Please try again.'
       }
@@ -223,26 +206,6 @@ export function MintModal({ isOpen, onClose, domain, onSuccess }: MintModalProps
             </Card>
           )}
 
-          {/* FID Input */}
-          <div className="space-y-2">
-            <Label htmlFor="fid" className="text-sm font-medium">
-              Farcaster ID (FID) *
-            </Label>
-            <Input
-              id="fid"
-              type="number"
-              placeholder="Enter your Farcaster ID (e.g., 258250)"
-              value={fid}
-              onChange={(e) => setFid(e.target.value)}
-              disabled={loading}
-              className="text-base"
-              min="1"
-            />
-            <p className="text-xs text-muted-foreground">
-              Enter your unique Farcaster identifier
-            </p>
-          </div>
-
           {/* Domain display */}
           <div className="space-y-2">
             <Label className="text-sm font-medium">Domain Name</Label>
@@ -281,7 +244,6 @@ export function MintModal({ isOpen, onClose, domain, onSuccess }: MintModalProps
             type="submit"
             disabled={
               loading || 
-              !fid.trim() ||
               !walletConnected || 
               balanceCheckLoading ||
               !balanceSufficient
@@ -294,8 +256,6 @@ export function MintModal({ isOpen, onClose, domain, onSuccess }: MintModalProps
                 <Loader2 className="w-4 h-4 animate-spin" />
                 {currentStep === 'approval' ? 'Approving...' : 'Minting...'}
               </>
-            ) : !fid.trim() ? (
-              'Enter Farcaster ID'
             ) : !walletConnected ? (
               'Connect Wallet to Mint'
             ) : balanceCheckLoading ? (
