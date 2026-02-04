@@ -43,12 +43,21 @@ const ERC20_ABI = [
 ]
 
 /**
- * Domain Contract ABI (minimal) - matches deployed NameRegistry
+ * Domain Contract ABI - matches deployed NameRegistry
+ * Includes custom errors for better error handling
  */
 const DOMAIN_CONTRACT_ABI = [
-  'function registerDomain(string domain, string bio, string socialLinks) external payable',
+  'function registerDomain(string domain, uint256 farcasterFid, string bio, string socialLinks) external payable returns (uint256)',
   'function isAvailable(string domain) external view returns (bool)',
-  'function getDomainInfo(string domain) external view returns (address owner, uint256 tokenId, uint256 expiresAt, string bio, string socialLinks)',
+  'function isFidRegistered(uint256 farcasterFid) external view returns (bool)',
+  'function getDomainInfo(string domain) external view returns (tuple(address owner, uint256 farcasterFid, uint256 tokenId, uint256 expiresAt, uint256 registeredAt, string bio, string socialLinks))',
+  'function getDomainsByFid(uint256 farcasterFid) external view returns (string[])',
+  'error DomainNotAvailable(string domain)',
+  'error FidAlreadyRegistered(uint256 fid)',
+  'error InvalidFarcasterFid(uint256 fid)',
+  'error InvalidDomainLength()',
+  'error InsufficientFunds()',
+  'error ContractPaused()',
 ]
 
 /**
@@ -220,9 +229,10 @@ export async function mintDomain(
     
     // Make the actual transaction
     console.log('[Minting] Sending actual transaction with value:', txOptions.value ? ethers.formatEther(txOptions.value) : 'none', 'CELO')
+    console.log('[Minting] Using FID:', params.fid)
     let tx
     try {
-      tx = await (contract as any).registerDomain(fullDomain, params.bio || '', params.socialLinks || '', txOptions)
+      tx = await (contract as any).registerDomain(fullDomain, params.fid, params.bio || '', params.socialLinks || '', txOptions)
     } catch (txErr) {
       const txMsg = txErr instanceof Error ? txErr.message : String(txErr)
       console.error('[Minting] Transaction call failed:', txMsg)
