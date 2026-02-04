@@ -167,11 +167,13 @@ export function RegistrationForm({
 
     setLoading(true)
     try {
-      // Prepare minting params
+      // Prepare minting params (include bio for on-chain metadata)
       const mintParams = {
         label: user.username, // dari Farcaster context
         fid: user.fid, // dari Farcaster context
         owner: walletAddress,
+        bio: bio.trim(),
+        socialLinks: '',
       }
 
       console.log('[RegistrationForm] Starting mint flow...')
