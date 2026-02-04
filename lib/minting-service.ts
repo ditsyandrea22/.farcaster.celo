@@ -274,16 +274,48 @@ export async function mintDomain(
     const errorMsg = error instanceof Error ? error.message : 'Unknown error'
     console.error('[Minting] Mint error:', errorMsg)
     
+    // Decode custom error signatures
+    const errorSignatures: { [key: string]: string } = {
+      '0xa38ec18c': 'FidAlreadyRegistered',
+      '0x6b86e6e0': 'DomainNotAvailable',
+      '0x3b50261f': 'InvalidFarcasterFid',
+      '0x1e9a6950': 'InvalidDomainLength',
+      '0xf4d678b8': 'InsufficientFunds',
+      '0x7c2e4e5e': 'ContractPaused',
+    }
+    
+    // Check if error contains a custom error signature
+    let decodedError = ''
+    for (const [sig, name] of Object.entries(errorSignatures)) {
+      if (errorMsg.includes(sig)) {
+        decodedError = name
+        break
+      }
+    }
+    
     // Parse and improve error messages
     let userFriendlyError = errorMsg
-    if (errorMsg.includes('insufficient funds')) {
+    
+    if (decodedError === 'FidAlreadyRegistered') {
+      userFriendlyError = `Your Farcaster ID (${params.fid}) is already registered in the system. Each FID can only be registered once. If you need to update your domain, use the domain management features instead.`
+    } else if (decodedError === 'DomainNotAvailable') {
+      userFriendlyError = `The domain "${fullDomain}" is not available. It may already be registered or reserved. Please try a different username.`
+    } else if (decodedError === 'InvalidFarcasterFid') {
+      userFriendlyError = `Your Farcaster ID (${params.fid}) is invalid. Please make sure you're using a valid Farcaster ID.`
+    } else if (decodedError === 'InvalidDomainLength') {
+      userFriendlyError = 'The domain length is invalid. It must be between 3 and 63 characters.'
+    } else if (decodedError === 'InsufficientFunds') {
+      userFriendlyError = `Insufficient funds. You need ${ethers.formatEther(BigInt(MINT_PRICE_WEI))} CELO plus gas fees.`
+    } else if (decodedError === 'ContractPaused') {
+      userFriendlyError = 'The registration service is currently paused. Please try again later.'
+    } else if (errorMsg.includes('insufficient funds')) {
       userFriendlyError = `Insufficient funds. You need ${ethers.formatEther(BigInt(MINT_PRICE_WEI))} CELO plus gas fees. Please check your wallet balance.`
     } else if (errorMsg.includes('insufficient balance')) {
       userFriendlyError = `Insufficient balance for transaction. Need more CELO in your wallet.`
     } else if (errorMsg.includes('already registered')) {
       userFriendlyError = 'This domain is already registered. Please choose a different username.'
     } else if (errorMsg.includes('revert') || errorMsg.includes('CALL_EXCEPTION')) {
-      userFriendlyError = 'Transaction reverted. The domain may already be registered or there may be a validation issue. Please try a different username.'
+      userFriendlyError = 'Transaction reverted. Please check your parameters and try again.'
     } else if (errorMsg.includes('Failed to send transaction')) {
       userFriendlyError = `Could not send transaction: ${errorMsg.split('Failed to send transaction: ')[1] || 'Unknown reason'}`
     }
