@@ -223,8 +223,8 @@ export async function mintDomain(
     }
 
     // Call registerDomain function on the deployed registry contract
-    // Use only the label, not the full domain
-    console.log('[Minting] Label to register:', params.label)
+    const fullDomain = `${params.label}.${DOMAIN_TLD}`
+    console.log('[Minting] Full domain to register:', fullDomain)
     console.log('[Minting] Contract address:', CONTRACT_ADDRESS)
     
     try {
@@ -252,11 +252,11 @@ export async function mintDomain(
       // Make the actual transaction
       console.log('[Minting] Sending actual transaction with value:', txOptions.value ? ethers.formatEther(txOptions.value) : 'none', 'CELO')
       console.log('[Minting] Using FID:', params.fid)
-      console.log('[Minting] Parameters:', { label: params.label, fid: params.fid, bio: params.bio || '', socialLinks: params.socialLinks || '' })
+      console.log('[Minting] Parameters:', { domain: fullDomain, fid: params.fid, bio: params.bio || '', socialLinks: params.socialLinks || '' })
       let tx
       try {
-        // Send only label, not full domain - contract will append TLD
-        tx = await (contract as any).registerDomain(params.label, params.fid, params.bio || '', params.socialLinks || '', txOptions)
+        // Send full domain (label + TLD) to contract
+        tx = await (contract as any).registerDomain(fullDomain, params.fid, params.bio || '', params.socialLinks || '', txOptions)
       } catch (txErr) {
         const txMsg = txErr instanceof Error ? txErr.message : String(txErr)
         console.error('[Minting] Transaction call failed:', txMsg)

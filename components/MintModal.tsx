@@ -38,7 +38,6 @@ export function MintModal({ isOpen, onClose, domain, onSuccess }: MintModalProps
   const { address: walletAddress, isConnected: walletConnected } = useAccount()
   const { data: walletClient } = useWalletClient()
 
-  const [bio, setBio] = useState('')
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState<string | null>(null)
   const [success, setSuccess] = useState(false)
@@ -107,11 +106,6 @@ export function MintModal({ isOpen, onClose, domain, onSuccess }: MintModalProps
       return
     }
 
-    if (!bio.trim()) {
-      setError('Bio is required for NFT metadata')
-      return
-    }
-
     if (!balanceSufficient) {
       setError('Insufficient balance for minting')
       return
@@ -126,7 +120,7 @@ export function MintModal({ isOpen, onClose, domain, onSuccess }: MintModalProps
         label,
         fid: user.fid,
         owner: walletAddress,
-        bio: bio.trim(),
+        bio: '', // Empty bio - simpler mint process
         socialLinks: '',
       }
 
@@ -287,25 +281,6 @@ export function MintModal({ isOpen, onClose, domain, onSuccess }: MintModalProps
             </div>
           </div>
 
-          {/* Bio input */}
-          <div className="space-y-2">
-            <Label htmlFor="bio" className="text-sm font-medium">
-              Bio (for NFT metadata)
-            </Label>
-            <Textarea
-              id="bio"
-              placeholder="Tell us about yourself..."
-              value={bio}
-              onChange={(e) => setBio(e.target.value)}
-              disabled={loading || !userReady || !walletConnected}
-              rows={3}
-              className="resize-none text-base"
-            />
-            <p className="text-xs text-muted-foreground">
-              {bio.length}/500 characters
-            </p>
-          </div>
-
           {/* Current step indicator */}
           {loading && (
             <Card className="p-3 bg-accent/20 border-accent/40">
@@ -323,7 +298,6 @@ export function MintModal({ isOpen, onClose, domain, onSuccess }: MintModalProps
               loading || 
               !userReady || 
               !walletConnected || 
-              !bio.trim() || 
               balanceCheckLoading ||
               !balanceSufficient
             }
