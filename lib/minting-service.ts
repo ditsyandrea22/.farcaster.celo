@@ -228,9 +228,23 @@ export async function mintDomain(
     console.log('[Minting] Contract address:', CONTRACT_ADDRESS)
     
     try {
+      // Check if FID is already registered before attempting to mint
+      console.log('[Minting] Checking if FID', params.fid, 'is already registered...')
+      try {
+        const isFidRegistered = await (contract as any).isFidRegistered(params.fid)
+        console.log('[Minting] isFidRegistered result:', isFidRegistered)
+        if (isFidRegistered) {
+          throw new Error(`FID ${params.fid} is already registered in the contract`)
+        }
+      } catch (fidCheckErr) {
+        const fidCheckMsg = fidCheckErr instanceof Error ? fidCheckErr.message : String(fidCheckErr)
+        console.warn('[Minting] FID check result:', fidCheckMsg)
+      }
+      
       // Make the actual transaction
       console.log('[Minting] Sending actual transaction with value:', txOptions.value ? ethers.formatEther(txOptions.value) : 'none', 'CELO')
       console.log('[Minting] Using FID:', params.fid)
+      console.log('[Minting] Parameters:', { domain: fullDomain, fid: params.fid, bio: params.bio || '', socialLinks: params.socialLinks || '' })
       let tx
       try {
         tx = await (contract as any).registerDomain(fullDomain, params.fid, params.bio || '', params.socialLinks || '', txOptions)
@@ -298,7 +312,7 @@ export async function mintDomain(
       let userFriendlyError = errorMsg
       
       if (decodedError === 'FidAlreadyRegistered') {
-        userFriendlyError = `Your Farcaster ID (${params.fid}) is already registered in the system. Each FID can only be registered once. If you need to update your domain, use the domain management features instead.`
+        userFriendlyError = `Your Farcaster ID (${params.fid}) is already registered in the contract. If you believe this is an error, the FID may have been registered from a different wallet. Each FID can only be registered once.`
       } else if (decodedError === 'DomainNotAvailable') {
         userFriendlyError = `The domain "${fullDomain}" is not available. It may already be registered or reserved. Please try a different username.`
       } else if (decodedError === 'InvalidFarcasterFid') {
@@ -529,6 +543,67 @@ export async function isDomainAvailable(label: string): Promise<boolean> {
     // Jika error (contract tidak punya function), assume available
     console.warn('[Minting] Could not check domain availability:', error)
     return true
+  }
+}
+
+/**
+ * Debug function to check contract state and FID registration
+ */
+export async function checkContractState(
+  fid: number,
+  domain: string
+): Promise<{
+  fidRegistered: boolean
+  domainAvailable: boolean
+  domainInfo?: any
+  error?: string
+}> {
+  try {
+    const provider = new ethers.JsonRpcProvider(CELO_RPC_URL, {
+      chainId: CELO_CHAIN_ID,
+      name: 'celo-mainnet',
+    })
+
+    const contract = new ethers.Contract(CONTRACT_ADDRESS, DOMAIN_CONTRACT_ABI, provider)
+
+    console.log('[Debug] Checking FID', fid, 'on contract', CONTRACT_ADDRESS)
+
+    // Check if FID is registered
+    let fidRegistered = false
+    try {
+      fidRegistered = await (contract as any).isFidRegistered(fid)
+      console.log('[Debug] FID registered:', fidRegistered)
+    } catch (err) {
+      console.error('[Debug] Error checking FID registration:', err)
+    }
+
+    // Check if domain is available
+    let domainAvailable = true
+    let domainInfo = null
+    try {
+      domainAvailable = await (contract as any).isAvailable(domain)
+      console.log('[Debug] Domain available:', domainAvailable)
+      
+      // Get domain info
+      domainInfo = await (contract as any).getDomainInfo(domain)
+      console.log('[Debug] Domain info:', domainInfo)
+    } catch (err) {
+      console.error('[Debug] Error checking domain:', err)
+    }
+
+    return {
+      fidRegistered,
+      domainAvailable,
+      domainInfo,
+    }
+  } catch (error) {
+    const errorMsg = error instanceof Error ? error.message : String(error)
+    console.error('[Debug] Error checking contract state:', errorMsg)
+    return {
+      fidRegistered: false,
+      domainAvailable: false,
+      error: errorMsg,
+    }
   }
 }
 
