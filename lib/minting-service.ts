@@ -218,31 +218,6 @@ export async function mintDomain(
     console.log('[Minting] Full domain to register:', fullDomain)
     console.log('[Minting] Contract address:', CONTRACT_ADDRESS)
     
-    // Try to check if domain is already registered using getDomainInfo
-    try {
-      const getDomainInfoFn = (contract as any).getDomainInfo
-      if (getDomainInfoFn) {
-        try {
-          const domainInfo = await getDomainInfoFn(fullDomain)
-          console.log('[Minting] Domain info:', domainInfo)
-          if (domainInfo && domainInfo.owner && domainInfo.owner !== '0x0000000000000000000000000000000000000000') {
-            throw new Error(`Domain ${fullDomain} is already registered to ${domainInfo.owner}`)
-          }
-        } catch (infoErr) {
-          const infoMsg = infoErr instanceof Error ? infoErr.message : String(infoErr)
-          if (infoMsg.includes('already registered')) {
-            throw infoErr
-          }
-          console.warn('[Minting] Could not check domain info:', infoMsg)
-        }
-      }
-    } catch (domainErr) {
-      throw domainErr
-    }
-
-    // Skip availability and preflight checks due to contract custom errors
-    // Go directly to transaction
-    
     // Make the actual transaction
     console.log('[Minting] Sending actual transaction with value:', txOptions.value ? ethers.formatEther(txOptions.value) : 'none', 'CELO')
     let tx
