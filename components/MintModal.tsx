@@ -169,7 +169,7 @@ export function MintModal({ isOpen, onClose, domain, onSuccess }: MintModalProps
       let userMessage = errorMsg
       
       if (errorMsg.includes('FidAlreadyRegistered') || errorMsg.includes('already registered')) {
-        userMessage = `Your Farcaster ID (${user?.fid}) is already registered. This FID can only be minted once.`
+        userMessage = `FID ${fid} is already registered. This FID can only be minted once. Please try a different FID.`
       } else if (errorMsg.includes('DomainNotAvailable') || errorMsg.includes('not available')) {
         userMessage = `The domain "${domain}" is not available. It may already be claimed.`
       } else if (errorMsg.includes('InsufficientFunds') || errorMsg.includes('insufficient')) {
