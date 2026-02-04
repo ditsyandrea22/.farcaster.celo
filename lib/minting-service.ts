@@ -221,9 +221,22 @@ export async function checkUserBalance(
 
     const sufficient = BigInt(balance) >= BigInt(MINT_PRICE_WEI)
 
+    // Get actual costs for ERC20 token payment
+    const costs = await estimateMintingCost()
+
+    console.log('[Minting] ERC20 Wallet Balance:', balanceDecimal)
+    console.log('[Minting] Registration Fee:', costs.registrationPrice)
+    console.log('[Minting] Estimated Gas:', costs.estimatedGas)
+    console.log('[Minting] Total Required:', costs.totalCost)
+    console.log('[Minting] Balance Sufficient:', sufficient)
+
     return {
       balance: balance.toString(),
       balanceDecimal,
+      registrationPrice: costs.registrationPrice,
+      estimatedGas: costs.estimatedGas,
+      totalRequired: ethers.parseEther(costs.totalCost).toString(),
+      totalRequiredDecimal: costs.totalCost,
       sufficient,
     }
   } catch (error) {
