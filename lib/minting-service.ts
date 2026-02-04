@@ -326,7 +326,7 @@ export async function mintDomain(
         error: userFriendlyError,
       }
     }
-}
+  }
 
 /**
  * Complete flow: Approval + Mint dalam satu transaction sequence
