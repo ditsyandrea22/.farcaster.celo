@@ -216,50 +216,33 @@ export async function mintDomain(
     // Call registerDomain function on the deployed registry contract
     const fullDomain = `${params.label}.${DOMAIN_TLD}`
     console.log('[Minting] Full domain to register:', fullDomain)
-
-    // Check if domain is available first
+    console.log('[Minting] Contract address:', CONTRACT_ADDRESS)
+    
+    // Try to check if domain is already registered using getDomainInfo
     try {
-      const isAvailableFn = contract.getFunction('isAvailable')
-      if (isAvailableFn) {
+      const getDomainInfoFn = (contract as any).getDomainInfo
+      if (getDomainInfoFn) {
         try {
-          const available = await isAvailableFn(fullDomain)
-          console.log('[Minting] Domain availability check:', available)
-          if (!available) {
-            throw new Error(`Domain ${fullDomain} is not available for registration`)
+          const domainInfo = await getDomainInfoFn(fullDomain)
+          console.log('[Minting] Domain info:', domainInfo)
+          if (domainInfo && domainInfo.owner && domainInfo.owner !== '0x0000000000000000000000000000000000000000') {
+            throw new Error(`Domain ${fullDomain} is already registered to ${domainInfo.owner}`)
           }
-        } catch (checkErr) {
-          const checkMsg = checkErr instanceof Error ? checkErr.message : String(checkErr)
-          if (checkMsg.includes('is not available')) {
-            throw checkErr
+        } catch (infoErr) {
+          const infoMsg = infoErr instanceof Error ? infoErr.message : String(infoErr)
+          if (infoMsg.includes('already registered')) {
+            throw infoErr
           }
-          console.warn('[Minting] Could not verify domain availability (continuing anyway):', checkMsg)
+          console.warn('[Minting] Could not check domain info:', infoMsg)
         }
       }
-    } catch (availErr) {
-      if (availErr instanceof Error && availErr.message.includes('is not available')) {
-        throw availErr
-      }
+    } catch (domainErr) {
+      throw domainErr
     }
 
-    // Preflight static call to surface revert reasons if any (helps debug missing revert data)
-    try {
-      console.log('[Minting] Calling staticCall with:', { fullDomain, bio: params.bio || '', socialLinks: params.socialLinks || '' })
-      await (contract as any).registerDomain.staticCall(fullDomain, params.bio || '', params.socialLinks || '')
-      console.log('[Minting] Preflight registerDomain call succeeded')
-    } catch (staticErr) {
-      const staticMsg = staticErr instanceof Error ? staticErr.message : String(staticErr)
-      console.error('[Minting] Preflight registerDomain call failed:', staticMsg)
-      
-      // Try to get more details about the error
-      if (staticErr instanceof Error && staticErr.message.includes('CALL_EXCEPTION')) {
-        console.error('[Minting] This is likely a contract revert. The domain might already be registered or other contract validation failed.')
-      }
-      
-      // Don't throw here - continue to actual transaction attempt since staticCall might have false positives
-      // Just log as warning
-      console.warn('[Minting] Preflight check failed, but attempting actual transaction anyway...')
-    }
-
+    // Skip availability and preflight checks due to contract custom errors
+    // Go directly to transaction
+    
     // Make the actual transaction
     console.log('[Minting] Sending actual transaction with value:', txOptions.value ? ethers.formatEther(txOptions.value) : 'none', 'CELO')
     let tx
@@ -268,6 +251,11 @@ export async function mintDomain(
     } catch (txErr) {
       const txMsg = txErr instanceof Error ? txErr.message : String(txErr)
       console.error('[Minting] Transaction call failed:', txMsg)
+      
+      // Provide better error messages
+      if (txMsg.includes('revert') || txMsg.includes('CALL_EXCEPTION')) {
+        console.error('[Minting] Contract reverted - the domain may already be registered or other validation failed')
+      }
       throw new Error(`Failed to send transaction: ${txMsg}`)
     }
 
@@ -307,8 +295,12 @@ export async function mintDomain(
       userFriendlyError = `Insufficient funds. You need ${ethers.formatEther(BigInt(MINT_PRICE_WEI))} CELO plus gas fees. Please check your wallet balance.`
     } else if (errorMsg.includes('insufficient balance')) {
       userFriendlyError = `Insufficient balance for transaction. Need more CELO in your wallet.`
-    } else if (errorMsg.includes('revert')) {
-      userFriendlyError = 'Transaction reverted. Please check your parameters and try again.'
+    } else if (errorMsg.includes('already registered')) {
+      userFriendlyError = 'This domain is already registered. Please choose a different username.'
+    } else if (errorMsg.includes('revert') || errorMsg.includes('CALL_EXCEPTION')) {
+      userFriendlyError = 'Transaction reverted. The domain may already be registered or there may be a validation issue. Please try a different username.'
+    } else if (errorMsg.includes('Failed to send transaction')) {
+      userFriendlyError = `Could not send transaction: ${errorMsg.split('Failed to send transaction: ')[1] || 'Unknown reason'}`
     }
     
     return {
