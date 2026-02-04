@@ -53,12 +53,6 @@ export function MintPage({ onBack }: MintPageProps) {
       setFarcasterData(null)
     }
   }
-  const handleMintSuccess = (txHash: string) => {
-    console.log('[MintPage] Mint successful:', txHash)
-    setShowMintTransaction(false)
-    setSelectedDomain(null)
-    setRegistrationData(null)
-  }
 
   return (
     <div className="min-h-screen bg-background">
