@@ -35,6 +35,7 @@ import type { GasEstimate } from '@/lib/types'
 interface RegistrationFormProps {
   onSubmit?: (data: any) => Promise<void>
   gasEstimate?: GasEstimate | null
+  selectedDomain?: string | null
 }
 
 export interface RegistrationData {
@@ -56,6 +57,7 @@ export interface RegistrationData {
 export function RegistrationForm({
   onSubmit,
   gasEstimate: externalGasEstimate,
+  selectedDomain,
 }: RegistrationFormProps) {
   // Read user dari Farcaster context
   const { 
@@ -66,6 +68,9 @@ export function RegistrationForm({
     domainLabel,
     fullDomain,
   } = useFarcasterUserReadyForMint()
+
+  // Use selectedDomain if provided (from search), otherwise use fullDomain from context
+  const displayDomain = selectedDomain || fullDomain
 
   // Wallet connection (Celo)
   const { address: walletAddress, isConnected: walletConnected } = useAccount()
@@ -290,13 +295,13 @@ export function RegistrationForm({
       )}
 
       {/* Display domain yang akan di-mint */}
-      {fullDomain && (
+      {displayDomain && (
         <div className="space-y-2">
           <Label className="text-sm font-medium">Domain Name</Label>
           <div className="px-4 py-3 rounded-lg bg-muted border border-border">
-            <p className="font-semibold text-lg">{fullDomain}</p>
+            <p className="font-semibold text-lg">{displayDomain}</p>
             <p className="text-xs text-muted-foreground mt-1">
-              Auto-generated dari username Anda
+              {selectedDomain ? 'Selected from search' : 'Auto-generated dari username Anda'}
             </p>
           </div>
         </div>
@@ -400,7 +405,7 @@ export function RegistrationForm({
         ) : !balanceSufficient ? (
           'Insufficient Balance'
         ) : (
-          'Mint Domain + NFT'
+          'Claim Now'
         )}
       </Button>
 

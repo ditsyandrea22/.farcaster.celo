@@ -28,7 +28,7 @@ export function MintPage({ onBack }: MintPageProps) {
   const [walletAddress, setWalletAddress] = useState<string | null>(null)
   const [farcasterData, setFarcasterData] = useState<any>(null)
   const [gasEstimate, setGasEstimate] = useState<GasEstimate | null>(null)
-  const [activeTab, setActiveTab] = useState('register')
+  const [activeTab, setActiveTab] = useState('mint')
   const [showMintTransaction, setShowMintTransaction] = useState(false)
   const [registrationData, setRegistrationData] = useState<RegistrationData | null>(null)
 
@@ -62,6 +62,11 @@ export function MintPage({ onBack }: MintPageProps) {
       setWalletAddress(null)
       setFarcasterData(null)
     }
+  }
+
+  const handleDomainSelect = (domain: string) => {
+    setSelectedDomain(domain)
+    setActiveTab('mint')
   }
 
   const handleRegistration = async (data: RegistrationData) => {
@@ -148,10 +153,10 @@ export function MintPage({ onBack }: MintPageProps) {
               <Tabs value={activeTab} onValueChange={setActiveTab} className="w-full">
                 <TabsList className="grid w-full grid-cols-3 bg-white/5 p-1 rounded-lg">
                   <TabsTrigger
-                    value="register"
+                    value="mint"
                     className="data-[state=active]:bg-gradient-to-r data-[state=active]:from-purple-500 data-[state=active]:to-blue-500 data-[state=active]:text-white"
                   >
-                    Register
+                    Mint
                   </TabsTrigger>
                   <TabsTrigger
                     value="search"
@@ -168,15 +173,16 @@ export function MintPage({ onBack }: MintPageProps) {
                 </TabsList>
 
                 <div className="mt-6">
-                  <TabsContent value="register" className="space-y-4">
+                  <TabsContent value="mint" className="space-y-4">
                     <RegistrationForm
                       onSubmit={handleRegistration}
+                      selectedDomain={selectedDomain}
                     />
                   </TabsContent>
 
                   <TabsContent value="search" className="space-y-4">
                     <DomainSearch
-                      onDomainSelect={setSelectedDomain}
+                      onDomainSelect={handleDomainSelect}
                     />
                   </TabsContent>
 
@@ -210,7 +216,7 @@ export function MintPage({ onBack }: MintPageProps) {
                   <span className="flex items-center justify-center w-6 h-6 rounded-full bg-gradient-to-r from-purple-500 to-blue-500 text-white text-sm font-bold flex-shrink-0">
                     3
                   </span>
-                  <span className="text-sm text-gray-300">Register and mint as NFT</span>
+                  <span className="text-sm text-gray-300">Claim your domain and mint as NFT</span>
                 </li>
                 <li className="flex gap-3">
                   <span className="flex items-center justify-center w-6 h-6 rounded-full bg-gradient-to-r from-purple-500 to-blue-500 text-white text-sm font-bold flex-shrink-0">
