@@ -223,8 +223,8 @@ export async function mintDomain(
     }
 
     // Call registerDomain function on the deployed registry contract
-    const fullDomain = `${params.label}.${DOMAIN_TLD}`
-    console.log('[Minting] Full domain to register:', fullDomain)
+    // Use only the label, not the full domain
+    console.log('[Minting] Label to register:', params.label)
     console.log('[Minting] Contract address:', CONTRACT_ADDRESS)
     
     try {
@@ -234,20 +234,29 @@ export async function mintDomain(
         const isFidRegistered = await (contract as any).isFidRegistered(params.fid)
         console.log('[Minting] isFidRegistered result:', isFidRegistered)
         if (isFidRegistered) {
-          throw new Error(`FID ${params.fid} is already registered in the contract`)
+          const error = new Error(`Your FID ${params.fid} is already registered. This Farcaster ID can only be minted once.`)
+          console.error('[Minting]', error.message)
+          throw error
         }
       } catch (fidCheckErr) {
         const fidCheckMsg = fidCheckErr instanceof Error ? fidCheckErr.message : String(fidCheckErr)
-        console.warn('[Minting] FID check result:', fidCheckMsg)
+        // If check itself fails, it's not necessarily an error - continue
+        if (!fidCheckMsg.includes('already registered')) {
+          console.warn('[Minting] FID check warning:', fidCheckMsg)
+        } else {
+          // If it's an already registered error, throw it
+          throw fidCheckErr
+        }
       }
       
       // Make the actual transaction
       console.log('[Minting] Sending actual transaction with value:', txOptions.value ? ethers.formatEther(txOptions.value) : 'none', 'CELO')
       console.log('[Minting] Using FID:', params.fid)
-      console.log('[Minting] Parameters:', { domain: fullDomain, fid: params.fid, bio: params.bio || '', socialLinks: params.socialLinks || '' })
+      console.log('[Minting] Parameters:', { label: params.label, fid: params.fid, bio: params.bio || '', socialLinks: params.socialLinks || '' })
       let tx
       try {
-        tx = await (contract as any).registerDomain(fullDomain, params.fid, params.bio || '', params.socialLinks || '', txOptions)
+        // Send only label, not full domain - contract will append TLD
+        tx = await (contract as any).registerDomain(params.label, params.fid, params.bio || '', params.socialLinks || '', txOptions)
       } catch (txErr) {
         const txMsg = txErr instanceof Error ? txErr.message : String(txErr)
         console.error('[Minting] Transaction call failed:', txMsg)
@@ -273,6 +282,7 @@ export async function mintDomain(
 
       if (receipt && receipt.status === 1) {
         console.log('[Minting] Register successful!')
+        const fullDomain = `${params.label}.${DOMAIN_TLD}`
         console.log('[Minting] Domain:', fullDomain)
         console.log('[Minting] Block:', receipt.blockNumber)
 
@@ -287,6 +297,7 @@ export async function mintDomain(
       }
     } catch (error) {
       const errorMsg = error instanceof Error ? error.message : 'Unknown error'
+      const fullDomain = `${params.label}.${DOMAIN_TLD}`
       console.error('[Minting] Mint error:', errorMsg)
       
       // Decode custom error signatures

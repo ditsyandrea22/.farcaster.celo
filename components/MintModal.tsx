@@ -163,6 +163,7 @@ export function MintModal({ isOpen, onClose, domain, onSuccess }: MintModalProps
 
       if (!result.success) {
         setError(`Minting failed: ${result.error}`)
+        setCurrentStep('prepare')
         return
       }
 
@@ -182,7 +183,23 @@ export function MintModal({ isOpen, onClose, domain, onSuccess }: MintModalProps
     } catch (err) {
       const errorMsg = err instanceof Error ? err.message : 'Mint transaction failed'
       console.error('[MintModal] Error:', errorMsg)
-      setError(errorMsg)
+      
+      // Provide user-friendly error messages
+      let userMessage = errorMsg
+      
+      if (errorMsg.includes('FidAlreadyRegistered') || errorMsg.includes('already registered')) {
+        userMessage = `Your Farcaster ID (${user?.fid}) is already registered. This FID can only be minted once.`
+      } else if (errorMsg.includes('DomainNotAvailable') || errorMsg.includes('not available')) {
+        userMessage = `The domain "${domain}" is not available. It may already be claimed.`
+      } else if (errorMsg.includes('InsufficientFunds') || errorMsg.includes('insufficient')) {
+        userMessage = 'Insufficient CELO balance. Please ensure you have enough CELO for the mint price and gas fees.'
+      } else if (errorMsg.includes('InvalidFarcasterFid')) {
+        userMessage = 'Invalid Farcaster ID. Please check your Farcaster account.'
+      } else if (errorMsg.includes('revert') || errorMsg.includes('CALL_EXCEPTION')) {
+        userMessage = 'Transaction failed. This could be due to contract issues or invalid parameters. Please try again.'
+      }
+      
+      setError(userMessage)
       setCurrentStep('prepare')
     } finally {
       setLoading(false)
