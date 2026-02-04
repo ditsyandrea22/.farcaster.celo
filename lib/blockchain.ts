@@ -89,6 +89,9 @@ export async function getRegisteredDomainsByOwner(ownerAddress: string): Promise
 
 /**
  * Check if a domain is available on the blockchain
+ * Note: New proxy contract doesn't expose isAvailable through proxy ABI
+ * Defaulting to available=true to allow users to attempt mint
+ * Contract will reject if domain is already claimed
  */
 export async function checkDomainAvailability(domain: string): Promise<boolean> {
   try {
@@ -96,26 +99,10 @@ export async function checkDomainAvailability(domain: string): Promise<boolean> 
       throw new Error('Invalid domain name')
     }
 
-    if (!CONTRACT_ADDRESS) {
-      console.warn('CONTRACT_ADDRESS not configured, cannot check availability')
-      return false
-    }
-
-    const provider = getCeloProvider()
-    
-    const ABI = [
-      'function isAvailable(string name) view returns (bool)',
-    ]
-
-    try {
-      const contract = new ethers.Contract(CONTRACT_ADDRESS, ABI, provider)
-      const available = await contract.isAvailable(domain)
-      return available
-    } catch (error) {
-      console.warn('Error checking domain availability:', error)
-      // If contract call fails, assume not available
-      return false
-    }
+    // Since the new proxy contract doesn't expose the isAvailable function,
+    // we default to true and let the contract handle validation during mint
+    console.log('[Blockchain] Domain availability check - defaulting to available for new proxy contract')
+    return true
   } catch (error) {
     console.error('Error checking domain:', error)
     return false
