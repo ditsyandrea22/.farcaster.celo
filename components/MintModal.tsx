@@ -94,7 +94,6 @@ export function MintModal({ isOpen, onClose, domain, onSuccess }: MintModalProps
 
       const mintParams = {
         label,
-        fid: 0, // No FID required - use 0
         owner: walletAddress,
         bio: '', // Empty bio - simpler mint process
         socialLinks: '',

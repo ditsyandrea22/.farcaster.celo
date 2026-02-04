@@ -21,7 +21,6 @@ const MINT_PRICE_WEI = process.env.NEXT_PUBLIC_MINT_PRICE_WEI || '10000000000000
 
 export interface MintingParams {
   label: string // username (e.g., "vina")
-  fid: number // Farcaster ID (required onchain)
   owner: string // wallet address
   bio?: string
   socialLinks?: string
@@ -43,21 +42,12 @@ const ERC20_ABI = [
 ]
 
 /**
- * Domain Contract ABI - matches deployed NameRegistry
- * Includes custom errors for better error handling
+ * Domain Contract ABI - matches deployed NameRegistry (proxy contract)
+ * Simplified for new contract version
  */
 const DOMAIN_CONTRACT_ABI = [
-  'function registerDomain(string domain, uint256 farcasterFid, string bio, string socialLinks) external payable returns (uint256)',
+  'function registerDomain(string domain) external payable returns (uint256)',
   'function isAvailable(string domain) external view returns (bool)',
-  'function isFidRegistered(uint256 farcasterFid) external view returns (bool)',
-  'function getDomainInfo(string domain) external view returns (tuple(address owner, uint256 farcasterFid, uint256 tokenId, uint256 expiresAt, uint256 registeredAt, string bio, string socialLinks))',
-  'function getDomainsByFid(uint256 farcasterFid) external view returns (string[])',
-  'error DomainNotAvailable(string domain)',
-  'error FidAlreadyRegistered(uint256 fid)',
-  'error InvalidFarcasterFid(uint256 fid)',
-  'error InvalidDomainLength()',
-  'error InsufficientFunds()',
-  'error ContractPaused()',
 ]
 
 /**
@@ -200,7 +190,6 @@ export async function mintDomain(
 
     console.log('[Minting] Starting domain mint...')
     console.log('[Minting] Label:', params.label)
-    console.log('[Minting] FID:', params.fid)
     console.log('[Minting] Owner:', params.owner)
 
     // Validate params
@@ -230,12 +219,11 @@ export async function mintDomain(
     try {
       // Make the actual transaction
       console.log('[Minting] Sending actual transaction with value:', txOptions.value ? ethers.formatEther(txOptions.value) : 'none', 'CELO')
-      console.log('[Minting] Using FID:', params.fid)
-      console.log('[Minting] Parameters:', { domain: fullDomain, fid: params.fid, bio: params.bio || '', socialLinks: params.socialLinks || '' })
+      console.log('[Minting] Parameters:', { domain: fullDomain })
       let tx
       try {
         // Send full domain (label + TLD) to contract
-        tx = await (contract as any).registerDomain(fullDomain, params.fid, params.bio || '', params.socialLinks || '', txOptions)
+        tx = await (contract as any).registerDomain(fullDomain, txOptions)
       } catch (txErr) {
         const txMsg = txErr instanceof Error ? txErr.message : String(txErr)
         console.error('[Minting] Transaction call failed:', txMsg)
@@ -494,11 +482,6 @@ export function validateMintParams(params: MintingParams): {
     errors.push('Label must be at least 1 character')
   } else if (params.label.length > 63) {
     errors.push('Label must be max 63 characters')
-  }
-
-  // Validate FID
-  if (!params.fid || params.fid <= 0) {
-    errors.push('Valid FID is required')
   }
 
   // Validate owner address
