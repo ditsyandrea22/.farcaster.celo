@@ -228,27 +228,6 @@ export async function mintDomain(
     console.log('[Minting] Contract address:', CONTRACT_ADDRESS)
     
     try {
-      // Check if FID is already registered before attempting to mint
-      console.log('[Minting] Checking if FID', params.fid, 'is already registered...')
-      try {
-        const isFidRegistered = await (contract as any).isFidRegistered(params.fid)
-        console.log('[Minting] isFidRegistered result:', isFidRegistered)
-        if (isFidRegistered) {
-          const error = new Error(`Your FID ${params.fid} is already registered. This Farcaster ID can only be minted once.`)
-          console.error('[Minting]', error.message)
-          throw error
-        }
-      } catch (fidCheckErr) {
-        const fidCheckMsg = fidCheckErr instanceof Error ? fidCheckErr.message : String(fidCheckErr)
-        // If check itself fails, it's not necessarily an error - continue
-        if (!fidCheckMsg.includes('already registered')) {
-          console.warn('[Minting] FID check warning:', fidCheckMsg)
-        } else {
-          // If it's an already registered error, throw it
-          throw fidCheckErr
-        }
-      }
-      
       // Make the actual transaction
       console.log('[Minting] Sending actual transaction with value:', txOptions.value ? ethers.formatEther(txOptions.value) : 'none', 'CELO')
       console.log('[Minting] Using FID:', params.fid)
