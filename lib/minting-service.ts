@@ -326,7 +326,15 @@ export async function mintDomain(
         error: userFriendlyError,
       }
     }
+  } catch (outerError) {
+    const errorMsg = outerError instanceof Error ? outerError.message : 'Unknown error'
+    console.error('[Minting] Outer mint error:', errorMsg)
+    return {
+      success: false,
+      error: errorMsg,
+    }
   }
+}
 
 /**
  * Complete flow: Approval + Mint dalam satu transaction sequence
