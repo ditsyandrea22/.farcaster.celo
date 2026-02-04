@@ -3,9 +3,9 @@
 import { useState, useEffect } from 'react'
 import { Loader2, AlertCircle, CheckCircle2, X } from 'lucide-react'
 import { Button } from '@/components/ui/button'
-import { Textarea } from '@/components/ui/textarea'
 import { Card } from '@/components/ui/card'
 import { Label } from '@/components/ui/label'
+import { Input } from '@/components/ui/input'
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from '@/components/ui/dialog'
 import { ShareMint } from './ShareMint'
 
@@ -23,9 +23,6 @@ import { switchToCeloMainnet, getFarcasterWalletProvider } from '@/lib/farcaster
 import { useAccount, useWalletClient } from 'wagmi'
 import { ethers } from 'ethers'
 
-// Farcaster context
-import { useFarcasterUserReadyForMint } from '@/hooks/use-farcaster-user'
-
 interface MintModalProps {
   isOpen: boolean
   onClose: () => void
@@ -34,10 +31,11 @@ interface MintModalProps {
 }
 
 export function MintModal({ isOpen, onClose, domain, onSuccess }: MintModalProps) {
-  const { user, loading: userLoading, isReady: userReady } = useFarcasterUserReadyForMint()
   const { address: walletAddress, isConnected: walletConnected } = useAccount()
   const { data: walletClient } = useWalletClient()
 
+  const [fid, setFid] = useState<string>('')
+  const [fidInputFocused, setFidInputFocused] = useState(false)
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState<string | null>(null)
   const [success, setSuccess] = useState(false)
@@ -46,21 +44,6 @@ export function MintModal({ isOpen, onClose, domain, onSuccess }: MintModalProps
   const [balanceCheckLoading, setBalanceCheckLoading] = useState(false)
   const [balanceSufficient, setBalanceSufficient] = useState(false)
   const [currentStep, setCurrentStep] = useState<'prepare' | 'approval' | 'mint' | 'success'>('prepare')
-
-  // Estimate gas cost
-  useEffect(() => {
-    const estimate = async () => {
-      try {
-        const result = await estimateMintingGas()
-        setGasEstimate(result)
-      } catch (err) {
-        console.warn('Gas estimation failed:', err)
-      }
-    }
-    if (userReady) {
-      estimate()
-    }
-  }, [userReady])
 
   // Check wallet balance
   useEffect(() => {
@@ -91,8 +74,14 @@ export function MintModal({ isOpen, onClose, domain, onSuccess }: MintModalProps
     setError(null)
     setSuccess(false)
 
-    if (!userReady || !user) {
-      setError('Farcaster context not available')
+    if (!fid.trim()) {
+      setError('Farcaster ID is required')
+      return
+    }
+
+    const fidNumber = parseInt(fid, 10)
+    if (isNaN(fidNumber) || fidNumber <= 0) {
+      setError('Please enter a valid Farcaster ID (positive number)')
       return
     }
 
@@ -118,7 +107,7 @@ export function MintModal({ isOpen, onClose, domain, onSuccess }: MintModalProps
 
       const mintParams = {
         label,
-        fid: user.fid,
+        fid: fidNumber,
         owner: walletAddress,
         bio: '', // Empty bio - simpler mint process
         socialLinks: '',
@@ -244,17 +233,25 @@ export function MintModal({ isOpen, onClose, domain, onSuccess }: MintModalProps
             </Card>
           )}
 
-          {/* User ready state */}
-          {userReady && user && (
-            <Card className="p-4 bg-primary/10 border-primary/30 space-y-2">
-              <div className="flex items-center gap-2">
-                <CheckCircle2 className="w-4 h-4 text-primary" />
-                <p className="text-sm font-medium text-primary">
-                  ✓ Farcaster: @{user.username} (FID: {user.fid})
-                </p>
-              </div>
-            </Card>
-          )}
+          {/* FID Input */}
+          <div className="space-y-2">
+            <Label htmlFor="fid" className="text-sm font-medium">
+              Farcaster ID (FID) *
+            </Label>
+            <Input
+              id="fid"
+              type="number"
+              placeholder="Enter your Farcaster ID (e.g., 258250)"
+              value={fid}
+              onChange={(e) => setFid(e.target.value)}
+              disabled={loading}
+              className="text-base"
+              min="1"
+            />
+            <p className="text-xs text-muted-foreground">
+              Enter your unique Farcaster identifier
+            </p>
+          </div>
 
           {/* Domain display */}
           <div className="space-y-2">
@@ -294,7 +291,7 @@ export function MintModal({ isOpen, onClose, domain, onSuccess }: MintModalProps
             type="submit"
             disabled={
               loading || 
-              !userReady || 
+              !fid.trim() ||
               !walletConnected || 
               balanceCheckLoading ||
               !balanceSufficient
@@ -307,8 +304,8 @@ export function MintModal({ isOpen, onClose, domain, onSuccess }: MintModalProps
                 <Loader2 className="w-4 h-4 animate-spin" />
                 {currentStep === 'approval' ? 'Approving...' : 'Minting...'}
               </>
-            ) : !userReady ? (
-              'Loading Farcaster Data...'
+            ) : !fid.trim() ? (
+              'Enter Farcaster ID'
             ) : !walletConnected ? (
               'Connect Wallet to Mint'
             ) : balanceCheckLoading ? (
