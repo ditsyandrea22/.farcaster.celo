@@ -213,16 +213,6 @@ export function MintModal({ isOpen, onClose, domain, onSuccess }: MintModalProps
         </DialogHeader>
 
         <form onSubmit={handleSubmit} className="space-y-4">
-          {/* Loading state */}
-          {userLoading && (
-            <Card className="p-4 bg-secondary/10 border-secondary/30 space-y-2">
-              <div className="flex items-center gap-2">
-                <Loader2 className="w-4 h-4 animate-spin text-secondary" />
-                <p className="text-sm font-medium text-secondary">Loading your Farcaster identity...</p>
-              </div>
-            </Card>
-          )}
-
           {/* Error state */}
           {error && (
             <Card className="p-3 border-destructive/50 bg-destructive/10">
