@@ -1,0 +1,337 @@
+'use client'
+
+import { useState, useEffect } from 'react'
+import { Loader2, AlertCircle, CheckCircle2, X } from 'lucide-react'
+import { Button } from '@/components/ui/button'
+import { Textarea } from '@/components/ui/textarea'
+import { Card } from '@/components/ui/card'
+import { Label } from '@/components/ui/label'
+import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from '@/components/ui/dialog'
+import { ShareMint } from './ShareMint'
+
+// Minting service
+import { 
+  completeMinutingFlow,
+  estimateMintingGas,
+  checkUserBalance,
+} from '@/lib/minting-service'
+
+// Wallet utilities
+import { switchToCeloMainnet, getFarcasterWalletProvider } from '@/lib/farcaster-wallet'
+
+// Wagmi untuk wallet connection
+import { useAccount, useWalletClient } from 'wagmi'
+import { ethers } from 'ethers'
+
+// Farcaster context
+import { useFarcasterUserReadyForMint } from '@/hooks/use-farcaster-user'
+
+interface MintModalProps {
+  isOpen: boolean
+  onClose: () => void
+  domain: string
+  onSuccess?: (txHash: string) => void
+}
+
+export function MintModal({ isOpen, onClose, domain, onSuccess }: MintModalProps) {
+  const { user, loading: userLoading, isReady: userReady } = useFarcasterUserReadyForMint()
+  const { address: walletAddress, isConnected: walletConnected } = useAccount()
+  const { data: walletClient } = useWalletClient()
+
+  const [bio, setBio] = useState('')
+  const [loading, setLoading] = useState(false)
+  const [error, setError] = useState<string | null>(null)
+  const [success, setSuccess] = useState(false)
+  const [txHash, setTxHash] = useState<string | null>(null)
+  const [gasEstimate, setGasEstimate] = useState<any>(null)
+  const [balanceCheckLoading, setBalanceCheckLoading] = useState(false)
+  const [balanceSufficient, setBalanceSufficient] = useState(false)
+  const [currentStep, setCurrentStep] = useState<'prepare' | 'approval' | 'mint' | 'success'>('prepare')
+
+  // Estimate gas cost
+  useEffect(() => {
+    const estimate = async () => {
+      try {
+        const result = await estimateMintingGas()
+        setGasEstimate(result)
+      } catch (err) {
+        console.warn('Gas estimation failed:', err)
+      }
+    }
+    if (userReady) {
+      estimate()
+    }
+  }, [userReady])
+
+  // Check wallet balance
+  useEffect(() => {
+    const checkBalance = async () => {
+      if (!walletAddress || !walletConnected) return
+
+      try {
+        setBalanceCheckLoading(true)
+        const result = await checkUserBalance(walletAddress)
+        setBalanceSufficient(result.sufficient)
+        
+        if (!result.sufficient) {
+          setError(`Insufficient balance. You need at least ${result.balanceDecimal} tokens`)
+        }
+      } catch (err) {
+        console.warn('Balance check failed:', err)
+        setBalanceSufficient(true)
+      } finally {
+        setBalanceCheckLoading(false)
+      }
+    }
+
+    checkBalance()
+  }, [walletAddress, walletConnected])
+
+  const handleSubmit = async (e: React.FormEvent) => {
+    e.preventDefault()
+    setError(null)
+    setSuccess(false)
+
+    if (!userReady || !user) {
+      setError('Farcaster context not available')
+      return
+    }
+
+    if (!walletConnected || !walletAddress) {
+      setError('Wallet not connected')
+      return
+    }
+
+    if (!walletClient) {
+      setError('Wallet client not available')
+      return
+    }
+
+    if (!bio.trim()) {
+      setError('Bio is required for NFT metadata')
+      return
+    }
+
+    if (!balanceSufficient) {
+      setError('Insufficient balance for minting')
+      return
+    }
+
+    setLoading(true)
+    try {
+      // Extract just the domain name without .farcaster.celo suffix
+      const label = domain.includes('.') ? domain.split('.')[0] : domain
+
+      const mintParams = {
+        label,
+        fid: user.fid,
+        owner: walletAddress,
+        bio: bio.trim(),
+        socialLinks: '',
+      }
+
+      console.log('[MintModal] Starting mint flow...')
+      console.log('[MintModal] Domain:', domain)
+      console.log('[MintModal] Label:', label)
+
+      // Ensure wallet is on Celo Mainnet
+      setCurrentStep('approval')
+      try {
+        await switchToCeloMainnet()
+        console.log('[MintModal] Successfully on Celo Mainnet')
+      } catch (chainError) {
+        console.error('[MintModal] Failed to switch to Celo Mainnet:', chainError)
+        setError('Failed to switch to Celo Mainnet')
+        setCurrentStep('prepare')
+        return
+      }
+
+      await new Promise(resolve => setTimeout(resolve, 500))
+
+      // Get signer
+      setCurrentStep('mint')
+      const provider = await getFarcasterWalletProvider()
+      const ethersProvider = new ethers.BrowserProvider(provider)
+      const signer = await ethersProvider.getSigner()
+
+      console.log('[MintModal] Signer obtained, calling mint flow...')
+
+      // Call complete minting flow
+      const result = await completeMinutingFlow(signer, mintParams, {
+        useNativePayment: true,
+      })
+
+      if (!result.success) {
+        setError(`Minting failed: ${result.error}`)
+        return
+      }
+
+      // Success
+      setTxHash(result.mintHash || '')
+      setSuccess(true)
+      setCurrentStep('success')
+
+      console.log('[MintModal] Mint successful!')
+      console.log('[MintModal] TX:', result.mintHash)
+
+      if (onSuccess) {
+        onSuccess(result.mintHash || '')
+      }
+
+      setBio('')
+    } catch (err) {
+      const errorMsg = err instanceof Error ? err.message : 'Mint transaction failed'
+      console.error('[MintModal] Error:', errorMsg)
+      setError(errorMsg)
+      setCurrentStep('prepare')
+    } finally {
+      setLoading(false)
+    }
+  }
+
+  if (success && domain) {
+    return (
+      <Dialog open={isOpen} onOpenChange={onClose}>
+        <DialogContent className="max-w-lg">
+          <ShareMint 
+            domain={domain} 
+            txHash={txHash || undefined}
+            openSeaUrl={`https://opensea.io/search?q=farcaster.celo`}
+          />
+          <Button onClick={onClose} className="w-full mt-4">Close</Button>
+        </DialogContent>
+      </Dialog>
+    )
+  }
+
+  return (
+    <Dialog open={isOpen} onOpenChange={onClose}>
+      <DialogContent className="max-w-lg">
+        <DialogHeader>
+          <DialogTitle>Mint Your Domain</DialogTitle>
+          <DialogDescription>
+            Claim {domain} and mint it as an NFT
+          </DialogDescription>
+        </DialogHeader>
+
+        <form onSubmit={handleSubmit} className="space-y-4">
+          {/* Loading state */}
+          {userLoading && (
+            <Card className="p-4 bg-secondary/10 border-secondary/30 space-y-2">
+              <div className="flex items-center gap-2">
+                <Loader2 className="w-4 h-4 animate-spin text-secondary" />
+                <p className="text-sm font-medium text-secondary">Loading your Farcaster identity...</p>
+              </div>
+            </Card>
+          )}
+
+          {/* Error state */}
+          {error && (
+            <Card className="p-3 border-destructive/50 bg-destructive/10">
+              <div className="flex gap-2">
+                <AlertCircle className="w-4 h-4 text-destructive flex-shrink-0 mt-0.5" />
+                <p className="text-sm text-destructive">{error}</p>
+              </div>
+            </Card>
+          )}
+
+          {/* User ready state */}
+          {userReady && user && (
+            <Card className="p-4 bg-primary/10 border-primary/30 space-y-2">
+              <div className="flex items-center gap-2">
+                <CheckCircle2 className="w-4 h-4 text-primary" />
+                <p className="text-sm font-medium text-primary">
+                  ✓ Farcaster: @{user.username} (FID: {user.fid})
+                </p>
+              </div>
+            </Card>
+          )}
+
+          {/* Domain display */}
+          <div className="space-y-2">
+            <Label className="text-sm font-medium">Domain Name</Label>
+            <div className="px-4 py-3 rounded-lg bg-muted border border-border">
+              <p className="font-semibold text-lg">{domain}</p>
+            </div>
+          </div>
+
+          {/* Wallet status */}
+          <div className="space-y-2">
+            <Label className="text-sm font-medium">Wallet (Celo)</Label>
+            <div className="px-4 py-3 rounded-lg bg-muted border border-border">
+              {walletConnected && walletAddress ? (
+                <div className="flex items-center justify-between">
+                  <p className="font-mono text-sm truncate">{walletAddress}</p>
+                  <CheckCircle2 className="w-4 h-4 text-green-500" />
+                </div>
+              ) : (
+                <p className="text-sm text-muted-foreground">Connect wallet to proceed</p>
+              )}
+            </div>
+          </div>
+
+          {/* Bio input */}
+          <div className="space-y-2">
+            <Label htmlFor="bio" className="text-sm font-medium">
+              Bio (for NFT metadata)
+            </Label>
+            <Textarea
+              id="bio"
+              placeholder="Tell us about yourself..."
+              value={bio}
+              onChange={(e) => setBio(e.target.value)}
+              disabled={loading || !userReady || !walletConnected}
+              rows={3}
+              className="resize-none text-base"
+            />
+            <p className="text-xs text-muted-foreground">
+              {bio.length}/500 characters
+            </p>
+          </div>
+
+          {/* Current step indicator */}
+          {loading && (
+            <Card className="p-3 bg-accent/20 border-accent/40">
+              <p className="text-sm font-medium">
+                {currentStep === 'approval' && 'Waiting for wallet approval...'}
+                {currentStep === 'mint' && 'Minting your domain...'}
+              </p>
+            </Card>
+          )}
+
+          {/* Submit button */}
+          <Button
+            type="submit"
+            disabled={
+              loading || 
+              !userReady || 
+              !walletConnected || 
+              !bio.trim() || 
+              balanceCheckLoading ||
+              !balanceSufficient
+            }
+            className="w-full gap-2"
+            size="lg"
+          >
+            {loading ? (
+              <>
+                <Loader2 className="w-4 h-4 animate-spin" />
+                {currentStep === 'approval' ? 'Approving...' : 'Minting...'}
+              </>
+            ) : !userReady ? (
+              'Loading Farcaster Data...'
+            ) : !walletConnected ? (
+              'Connect Wallet to Mint'
+            ) : balanceCheckLoading ? (
+              'Checking Balance...'
+            ) : !balanceSufficient ? (
+              'Insufficient Balance'
+            ) : (
+              'Claim Now'
+            )}
+          </Button>
+        </form>
+      </DialogContent>
+    </Dialog>
+  )
+}

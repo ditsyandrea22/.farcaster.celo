@@ -6,6 +6,7 @@ import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Card } from '@/components/ui/card'
 import { validateDomainName, checkDomainAvailability } from '@/lib/blockchain'
+import { MintModal } from './MintModal'
 
 interface DomainSearchProps {
   onDomainSelect?: (domain: string) => void
@@ -16,6 +17,8 @@ export function DomainSearch({ onDomainSelect }: DomainSearchProps) {
   const [checking, setChecking] = useState(false)
   const [available, setAvailable] = useState<boolean | null>(null)
   const [error, setError] = useState<string | null>(null)
+  const [showMintModal, setShowMintModal] = useState(false)
+  const [selectedDomainForMint, setSelectedDomainForMint] = useState<string>('')
 
   useEffect(() => {
     const timer = setTimeout(async () => {
@@ -49,8 +52,13 @@ export function DomainSearch({ onDomainSelect }: DomainSearchProps) {
   }, [domain])
 
   const handleSearch = () => {
-    if (available && onDomainSelect) {
-      onDomainSelect(domain)
+    if (available) {
+      const fullDomain = `${domain}.farcaster.celo`
+      setSelectedDomainForMint(fullDomain)
+      setShowMintModal(true)
+      if (onDomainSelect) {
+        onDomainSelect(domain)
+      }
     }
   }
 
@@ -139,6 +147,18 @@ export function DomainSearch({ onDomainSelect }: DomainSearchProps) {
           </div>
         </Card>
       )}
+
+      {/* Mint Modal */}
+      <MintModal
+        isOpen={showMintModal}
+        onClose={() => setShowMintModal(false)}
+        domain={selectedDomainForMint}
+        onSuccess={() => {
+          setShowMintModal(false)
+          setDomain('')
+          setAvailable(null)
+        }}
+      />
     </div>
   )
 }

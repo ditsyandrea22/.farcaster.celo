@@ -5,8 +5,6 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs'
 import { Card } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
 import { DomainSearch } from '@/components/DomainSearch'
-import { RegistrationForm } from '@/components/RegistrationForm'
-import { MintTransactionHandler } from '@/components/MintTransactionHandler'
 import { NFTGallery } from '@/components/NFTGallery'
 import { WalletStatus } from '@/components/WalletStatus'
 import { ArrowLeft, Network, Zap, Sparkles } from 'lucide-react'
@@ -16,21 +14,13 @@ interface MintPageProps {
   onBack?: () => void
 }
 
-interface RegistrationData {
-  label: string
-  fid: number
-  owner: string
-}
-
 export function MintPage({ onBack }: MintPageProps) {
   const [selectedDomain, setSelectedDomain] = useState<string | null>(null)
   const [walletConnected, setWalletConnected] = useState(false)
   const [walletAddress, setWalletAddress] = useState<string | null>(null)
   const [farcasterData, setFarcasterData] = useState<any>(null)
   const [gasEstimate, setGasEstimate] = useState<GasEstimate | null>(null)
-  const [activeTab, setActiveTab] = useState('mint')
-  const [showMintTransaction, setShowMintTransaction] = useState(false)
-  const [registrationData, setRegistrationData] = useState<RegistrationData | null>(null)
+  const [activeTab, setActiveTab] = useState('search')
 
   useEffect(() => {
     const fetchGasEstimate = async () => {
@@ -63,18 +53,6 @@ export function MintPage({ onBack }: MintPageProps) {
       setFarcasterData(null)
     }
   }
-
-  const handleDomainSelect = (domain: string) => {
-    setSelectedDomain(domain)
-    setActiveTab('mint')
-  }
-
-  const handleRegistration = async (data: RegistrationData) => {
-    console.log('[MintPage] Registration data:', data)
-    setRegistrationData(data)
-    setShowMintTransaction(true)
-  }
-
   const handleMintSuccess = (txHash: string) => {
     console.log('[MintPage] Mint successful:', txHash)
     setShowMintTransaction(false)
@@ -151,14 +129,9 @@ export function MintPage({ onBack }: MintPageProps) {
             {/* Tabs Section */}
             <Card className="p-6 border-white/10 bg-background/50 backdrop-blur-sm">
               <Tabs value={activeTab} onValueChange={setActiveTab} className="w-full">
-                <TabsList className="grid w-full grid-cols-3 bg-white/5 p-1 rounded-lg">
+                <TabsList className="grid w-full grid-cols-2 bg-white/5 p-1 rounded-lg">
                   <TabsTrigger
-                    value="mint"
-                    className="data-[state=active]:bg-gradient-to-r data-[state=active]:from-purple-500 data-[state=active]:to-blue-500 data-[state=active]:text-white"
-                  >
-                    Mint
-                  </TabsTrigger>
-                  <TabsTrigger
+
                     value="search"
                     className="data-[state=active]:bg-gradient-to-r data-[state=active]:from-purple-500 data-[state=active]:to-blue-500 data-[state=active]:text-white"
                   >
@@ -173,16 +146,9 @@ export function MintPage({ onBack }: MintPageProps) {
                 </TabsList>
 
                 <div className="mt-6">
-                  <TabsContent value="mint" className="space-y-4">
-                    <RegistrationForm
-                      onSubmit={handleRegistration}
-                      selectedDomain={selectedDomain}
-                    />
-                  </TabsContent>
-
                   <TabsContent value="search" className="space-y-4">
                     <DomainSearch
-                      onDomainSelect={handleDomainSelect}
+                      onDomainSelect={setSelectedDomain}
                     />
                   </TabsContent>
 
@@ -247,16 +213,6 @@ export function MintPage({ onBack }: MintPageProps) {
             </Card>
           </div>
         </div>
-
-        {/* Mint Transaction Modal */}
-        {showMintTransaction && registrationData && (
-          <MintTransactionHandler
-            label={registrationData.label}
-            fid={registrationData.fid}
-            walletAddress={walletAddress || ''}
-            onSuccess={handleMintSuccess}
-          />
-        )}
       </main>
     </div>
   )
