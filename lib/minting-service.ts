@@ -42,12 +42,17 @@ const ERC20_ABI = [
 ]
 
 /**
- * Domain Contract ABI - matches deployed NameRegistry (proxy contract)
- * Simplified for new contract version
+ * Domain Contract ABI - matches new proxy contract implementation
  */
 const DOMAIN_CONTRACT_ABI = [
-  'function registerDomain(string domain) external payable returns (uint256)',
-  'function isAvailable(string domain) external view returns (bool)',
+  'function register(string name) external payable',
+  'function renew(string name) external payable',
+  'function pricePerYear() external view returns (uint256)',
+  'function renewalPricePerYear() external view returns (uint256)',
+  'function getReverse(address user) external view returns (string)',
+  'function setReverse(string name) external',
+  'function ownerOf(uint256 tokenId) external view returns (address)',
+  'function balanceOf(address owner) external view returns (uint256)',
 ]
 
 /**
@@ -222,8 +227,8 @@ export async function mintDomain(
       console.log('[Minting] Parameters:', { domain: fullDomain })
       let tx
       try {
-        // Send full domain (label + TLD) to contract
-        tx = await (contract as any).registerDomain(fullDomain, txOptions)
+        // Call register function with full domain
+        tx = await (contract as any).register(fullDomain, txOptions)
       } catch (txErr) {
         const txMsg = txErr instanceof Error ? txErr.message : String(txErr)
         console.error('[Minting] Transaction call failed:', txMsg)
@@ -267,15 +272,9 @@ export async function mintDomain(
       const fullDomain = `${params.label}.${DOMAIN_TLD}`
       console.error('[Minting] Mint error:', errorMsg)
       
-      // Decode custom error signatures
-      const errorSignatures: { [key: string]: string } = {
-        '0xa38ec18c': 'FidAlreadyRegistered',
-        '0x6b86e6e0': 'DomainNotAvailable',
-        '0x3b50261f': 'InvalidFarcasterFid',
-        '0x1e9a6950': 'InvalidDomainLength',
-        '0xf4d678b8': 'InsufficientFunds',
-        '0x7c2e4e5e': 'ContractPaused',
-      }
+      // Decode custom error signatures (for new contract)
+      // The new contract uses ERC721 and standard errors
+      const errorSignatures: { [key: string]: string } = {}
       
       // Check if error contains a custom error signature
       let decodedError = ''
@@ -289,18 +288,12 @@ export async function mintDomain(
       // Parse and improve error messages
       let userFriendlyError = errorMsg
       
-      if (decodedError === 'FidAlreadyRegistered') {
-        userFriendlyError = `Your Farcaster ID (${params.fid}) is already registered in the contract. If you believe this is an error, the FID may have been registered from a different wallet. Each FID can only be registered once.`
-      } else if (decodedError === 'DomainNotAvailable') {
+      if (decodedError === 'DomainNotAvailable') {
         userFriendlyError = `The domain "${fullDomain}" is not available. It may already be registered or reserved. Please try a different username.`
-      } else if (decodedError === 'InvalidFarcasterFid') {
-        userFriendlyError = `Your Farcaster ID (${params.fid}) is invalid. Please make sure you're using a valid Farcaster ID.`
       } else if (decodedError === 'InvalidDomainLength') {
         userFriendlyError = 'The domain length is invalid. It must be between 3 and 63 characters.'
       } else if (decodedError === 'InsufficientFunds') {
         userFriendlyError = `Insufficient funds. You need ${ethers.formatEther(BigInt(MINT_PRICE_WEI))} CELO plus gas fees.`
-      } else if (decodedError === 'ContractPaused') {
-        userFriendlyError = 'The registration service is currently paused. Please try again later.'
       } else if (errorMsg.includes('insufficient funds')) {
         userFriendlyError = `Insufficient funds. You need ${ethers.formatEther(BigInt(MINT_PRICE_WEI))} CELO plus gas fees. Please check your wallet balance.`
       } else if (errorMsg.includes('insufficient balance')) {
