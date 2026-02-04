@@ -41,9 +41,10 @@ export function MintModal({ isOpen, onClose, domain, onSuccess }: MintModalProps
   const [gasEstimate, setGasEstimate] = useState<any>(null)
   const [balanceCheckLoading, setBalanceCheckLoading] = useState(false)
   const [balanceSufficient, setBalanceSufficient] = useState(false)
+  const [costBreakdown, setCostBreakdown] = useState<any>(null)
   const [currentStep, setCurrentStep] = useState<'prepare' | 'approval' | 'mint' | 'success'>('prepare')
 
-  // Check wallet balance
+  // Check wallet balance and get cost breakdown
   useEffect(() => {
     const checkBalance = async () => {
       if (!walletAddress || !walletConnected) return
@@ -52,9 +53,10 @@ export function MintModal({ isOpen, onClose, domain, onSuccess }: MintModalProps
         setBalanceCheckLoading(true)
         const result = await checkUserBalance(walletAddress)
         setBalanceSufficient(result.sufficient)
+        setCostBreakdown(result)
         
         if (!result.sufficient) {
-          setError(`Insufficient balance. You need at least ${result.balanceDecimal} tokens`)
+          setError(`Insufficient balance. You need ${result.totalRequiredDecimal} CELO but have only ${result.balanceDecimal} CELO`)
         }
       } catch (err) {
         console.warn('Balance check failed:', err)
@@ -227,6 +229,30 @@ export function MintModal({ isOpen, onClose, domain, onSuccess }: MintModalProps
               )}
             </div>
           </div>
+
+          {/* Cost Breakdown */}
+          {costBreakdown && !balanceCheckLoading && (
+            <Card className="p-4 bg-blue-50 border-blue-200">
+              <Label className="text-sm font-semibold mb-3 block">Transaction Costs Breakdown</Label>
+              <div className="space-y-2 text-sm">
+                <div className="flex justify-between">
+                  <span className="text-gray-600">Registration Fee:</span>
+                  <span className="font-medium">{costBreakdown.registrationPrice} CELO</span>
+                </div>
+                <div className="flex justify-between">
+                  <span className="text-gray-600">Estimated Gas Fee:</span>
+                  <span className="font-medium">{costBreakdown.estimatedGas} CELO</span>
+                </div>
+                <div className="border-t border-blue-200 pt-2 flex justify-between">
+                  <span className="font-semibold text-gray-800">Total Required:</span>
+                  <span className="font-bold text-blue-700">{costBreakdown.totalRequiredDecimal} CELO</span>
+                </div>
+                <div className="text-xs text-gray-500 mt-2">
+                  Your Balance: <span className="font-medium text-gray-700">{costBreakdown.balanceDecimal} CELO</span>
+                </div>
+              </div>
+            </Card>
+          )}
 
           {/* Current step indicator */}
           {loading && (

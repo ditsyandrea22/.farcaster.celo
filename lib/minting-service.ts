@@ -15,9 +15,115 @@ const CELO_RPC_URL = process.env.NEXT_PUBLIC_CELO_RPC_URL || 'https://forno.celo
 
 // Domain Configuration
 const DOMAIN_TLD = 'farcaster.celo'
-// Default: 0.01 CELO (10000000000000000 wei) - leaves plenty for gas
-// Override via NEXT_PUBLIC_MINT_PRICE_WEI env var
-const MINT_PRICE_WEI = process.env.NEXT_PUBLIC_MINT_PRICE_WEI || '10000000000000000'
+// Default fallback price if contract call fails
+const MINT_PRICE_WEI = process.env.NEXT_PUBLIC_MINT_PRICE_WEI || '250000000000000000' // 0.25 CELO as fallback
+
+/**
+ * Fetch actual registration price from smart contract
+ */
+export async function getRegistrationPrice(): Promise<{
+  priceWei: string
+  priceCELO: string
+}> {
+  try {
+    if (!CONTRACT_ADDRESS) {
+      console.warn('[Minting] Contract address not configured, using fallback price')
+      return {
+        priceWei: MINT_PRICE_WEI,
+        priceCELO: ethers.formatEther(MINT_PRICE_WEI),
+      }
+    }
+
+    const provider = new ethers.JsonRpcProvider(CELO_RPC_URL, {
+      chainId: CELO_CHAIN_ID,
+      name: 'celo-mainnet',
+    })
+
+    const contract = new ethers.Contract(CONTRACT_ADDRESS, DOMAIN_CONTRACT_ABI, provider)
+    const priceWei = await contract.pricePerYear()
+    const priceCELO = ethers.formatEther(priceWei)
+
+    console.log('[Minting] Retrieved registration price from contract:', priceCELO, 'CELO')
+
+    return {
+      priceWei: priceWei.toString(),
+      priceCELO,
+    }
+  } catch (error) {
+    console.warn('[Minting] Error fetching price from contract, using fallback:', error)
+    return {
+      priceWei: MINT_PRICE_WEI,
+      priceCELO: ethers.formatEther(MINT_PRICE_WEI),
+    }
+  }
+}
+
+/**
+ * Estimate total cost for minting including gas
+ */
+export async function estimateMintingCost(): Promise<{
+  registrationPrice: string
+  estimatedGas: string
+  totalCost: string
+  breakdown: {
+    registration: string
+    gas: string
+    total: string
+  }
+}> {
+  try {
+    // Get actual price from contract
+    const { priceWei, priceCELO: registrationPrice } = await getRegistrationPrice()
+
+    // Estimate gas
+    const provider = new ethers.JsonRpcProvider(CELO_RPC_URL, {
+      chainId: CELO_CHAIN_ID,
+      name: 'celo-mainnet',
+    })
+
+    const gasPrice = await provider.getFeeData()
+    // Estimate 150,000 gas for domain registration
+    const estimatedGasUnits = BigInt(150000)
+    const gasPriceBigInt = gasPrice.gasPrice || ethers.parseUnits('1', 'gwei')
+    const estimatedGasWei = gasPriceBigInt * estimatedGasUnits
+    const estimatedGasCELO = ethers.formatEther(estimatedGasWei)
+
+    // Total
+    const totalCostWei = BigInt(priceWei) + estimatedGasWei
+    const totalCostCELO = ethers.formatEther(totalCostWei)
+
+    console.log('[Minting] Cost breakdown:')
+    console.log('  Registration:', registrationPrice, 'CELO')
+    console.log('  Estimated Gas:', estimatedGasCELO, 'CELO')
+    console.log('  Total:', totalCostCELO, 'CELO')
+
+    return {
+      registrationPrice,
+      estimatedGas: estimatedGasCELO,
+      totalCost: totalCostCELO,
+      breakdown: {
+        registration: registrationPrice,
+        gas: estimatedGasCELO,
+        total: totalCostCELO,
+      },
+    }
+  } catch (error) {
+    console.error('[Minting] Error estimating minting cost:', error)
+    // Return fallback with buffer
+    const fallbackTotal = (BigInt(MINT_PRICE_WEI) * BigInt(2)).toString()
+    const fallbackTotalCELO = ethers.formatEther(fallbackTotal)
+    return {
+      registrationPrice: ethers.formatEther(MINT_PRICE_WEI),
+      estimatedGas: ethers.formatEther(MINT_PRICE_WEI),
+      totalCost: fallbackTotalCELO,
+      breakdown: {
+        registration: ethers.formatEther(MINT_PRICE_WEI),
+        gas: ethers.formatEther(MINT_PRICE_WEI),
+        total: fallbackTotalCELO,
+      },
+    }
+  }
+}
 
 export interface MintingParams {
   label: string // username (e.g., "vina")
@@ -56,19 +162,23 @@ const DOMAIN_CONTRACT_ABI = [
 ]
 
 /**
- * Step 1: Check user balance untuk memastikan mereka punya token untuk approval
+ * Check user balance - fetches actual costs from contract
  */
 export async function checkUserBalance(
   walletAddress: string,
   tokenAddress: string = FEE_TOKEN_ADDRESS
 ): Promise<{
-  balance: string // in wei
-  balanceDecimal: string // readable format
+  balance: string
+  balanceDecimal: string
+  registrationPrice: string
+  estimatedGas: string
+  totalRequired: string
+  totalRequiredDecimal: string
   sufficient: boolean
 }> {
   try {
     if (!tokenAddress) {
-      // For native CELO payment, check native balance with gas buffer
+      // For native CELO payment, check native balance
       console.log('[Minting] Checking native CELO balance...')
       const provider = new ethers.JsonRpcProvider(CELO_RPC_URL, {
         chainId: CELO_CHAIN_ID,
@@ -78,20 +188,24 @@ export async function checkUserBalance(
       const balance = await provider.getBalance(walletAddress)
       const balanceDecimal = ethers.formatEther(balance)
       
-      // Need: mint price + gas (estimate ~50k gas * gasPrice)
-      // With typical 1 gwei gas price on Celo, that's ~0.05 CELO
-      // So we need mint price + 0.1 CELO buffer
-      const GAS_BUFFER = ethers.parseEther('0.1')
-      const TOTAL_NEEDED = BigInt(MINT_PRICE_WEI) + GAS_BUFFER
-      const sufficient = balance >= TOTAL_NEEDED
+      // Get actual costs
+      const costs = await estimateMintingCost()
+      const totalNeededWei = ethers.parseEther(costs.totalCost)
+      const sufficient = balance >= totalNeededWei
       
-      console.log('[Minting] Native balance:', balanceDecimal, 'CELO')
-      console.log('[Minting] Required (price + gas buffer):', ethers.formatEther(TOTAL_NEEDED), 'CELO')
-      console.log('[Minting] Sufficient:', sufficient)
+      console.log('[Minting] Wallet Balance:', balanceDecimal, 'CELO')
+      console.log('[Minting] Registration Fee:', costs.registrationPrice, 'CELO')
+      console.log('[Minting] Estimated Gas:', costs.estimatedGas, 'CELO')
+      console.log('[Minting] Total Required:', costs.totalCost, 'CELO')
+      console.log('[Minting] Balance Sufficient:', sufficient)
       
       return {
         balance: balance.toString(),
         balanceDecimal,
+        registrationPrice: costs.registrationPrice,
+        estimatedGas: costs.estimatedGas,
+        totalRequired: totalNeededWei.toString(),
+        totalRequiredDecimal: costs.totalCost,
         sufficient,
       }
     }
