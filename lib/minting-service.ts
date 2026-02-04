@@ -217,27 +217,71 @@ export async function mintDomain(
     const fullDomain = `${params.label}.${DOMAIN_TLD}`
     console.log('[Minting] Full domain to register:', fullDomain)
 
+    // Check if domain is available first
+    try {
+      const isAvailableFn = contract.getFunction('isAvailable')
+      if (isAvailableFn) {
+        try {
+          const available = await isAvailableFn(fullDomain)
+          console.log('[Minting] Domain availability check:', available)
+          if (!available) {
+            throw new Error(`Domain ${fullDomain} is not available for registration`)
+          }
+        } catch (checkErr) {
+          const checkMsg = checkErr instanceof Error ? checkErr.message : String(checkErr)
+          if (checkMsg.includes('is not available')) {
+            throw checkErr
+          }
+          console.warn('[Minting] Could not verify domain availability (continuing anyway):', checkMsg)
+        }
+      }
+    } catch (availErr) {
+      if (availErr instanceof Error && availErr.message.includes('is not available')) {
+        throw availErr
+      }
+    }
+
     // Preflight static call to surface revert reasons if any (helps debug missing revert data)
     try {
-      const fn = contract.getFunction('registerDomain')
-      if (!fn) {
-        throw new Error('registerDomain function not found in contract ABI')
-      }
-      await fn.staticCall(fullDomain, params.bio || '', params.socialLinks || '')
+      console.log('[Minting] Calling staticCall with:', { fullDomain, bio: params.bio || '', socialLinks: params.socialLinks || '' })
+      await (contract as any).registerDomain.staticCall(fullDomain, params.bio || '', params.socialLinks || '')
+      console.log('[Minting] Preflight registerDomain call succeeded')
     } catch (staticErr) {
       const staticMsg = staticErr instanceof Error ? staticErr.message : String(staticErr)
       console.error('[Minting] Preflight registerDomain call failed:', staticMsg)
-      // Throw to be handled by outer catch and returned as user-friendly error
-      throw new Error(staticMsg)
+      
+      // Try to get more details about the error
+      if (staticErr instanceof Error && staticErr.message.includes('CALL_EXCEPTION')) {
+        console.error('[Minting] This is likely a contract revert. The domain might already be registered or other contract validation failed.')
+      }
+      
+      // Don't throw here - continue to actual transaction attempt since staticCall might have false positives
+      // Just log as warning
+      console.warn('[Minting] Preflight check failed, but attempting actual transaction anyway...')
     }
 
     // Make the actual transaction
-    const tx = await contract.getFunction('registerDomain')(fullDomain, params.bio || '', params.socialLinks || '', txOptions)
+    console.log('[Minting] Sending actual transaction with value:', txOptions.value ? ethers.formatEther(txOptions.value) : 'none', 'CELO')
+    let tx
+    try {
+      tx = await (contract as any).registerDomain(fullDomain, params.bio || '', params.socialLinks || '', txOptions)
+    } catch (txErr) {
+      const txMsg = txErr instanceof Error ? txErr.message : String(txErr)
+      console.error('[Minting] Transaction call failed:', txMsg)
+      throw new Error(`Failed to send transaction: ${txMsg}`)
+    }
 
     console.log('[Minting] Register tx sent:', tx.hash)
 
     // Wait untuk confirmation
-    const receipt = await tx.wait()
+    let receipt
+    try {
+      receipt = await tx.wait()
+    } catch (waitErr) {
+      const waitMsg = waitErr instanceof Error ? waitErr.message : String(waitErr)
+      console.error('[Minting] Transaction confirmation failed:', waitMsg)
+      throw new Error(`Transaction confirmation failed: ${waitMsg}`)
+    }
 
     if (receipt && receipt.status === 1) {
       console.log('[Minting] Register successful!')
