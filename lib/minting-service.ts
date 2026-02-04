@@ -23,6 +23,8 @@ export interface MintingParams {
   label: string // username (e.g., "vina")
   fid: number // Farcaster ID (required onchain)
   owner: string // wallet address
+  bio?: string
+  socialLinks?: string
 }
 
 export interface ApprovalParams {
@@ -41,12 +43,12 @@ const ERC20_ABI = [
 ]
 
 /**
- * Domain Contract ABI (minimal)
+ * Domain Contract ABI (minimal) - matches deployed NameRegistry
  */
 const DOMAIN_CONTRACT_ABI = [
-  'function mint(string calldata label, uint256 fid) external payable',
-  'function ownerOf(bytes32 node) external view returns (address)',
-  'function getDomainInfo(string calldata label) external view returns (address owner, uint256 expiry)',
+  'function registerDomain(string domain, string bio, string socialLinks) external payable',
+  'function isAvailable(string domain) external view returns (bool)',
+  'function getDomainInfo(string domain) external view returns (address owner, uint256 tokenId, uint256 expiresAt, string bio, string socialLinks)',
 ]
 
 /**
@@ -211,17 +213,29 @@ export async function mintDomain(
       console.log('[Minting] Native CELO payment value:', ethers.formatEther(txOptions.value), 'CELO')
     }
 
-    // Call mint function dengan label + FID
-    const tx = await contract.mint(params.label, params.fid, txOptions)
+    // Call registerDomain function on the deployed registry contract
+    const fullDomain = `${params.label}.${DOMAIN_TLD}`
+    console.log('[Minting] Full domain to register:', fullDomain)
 
-    console.log('[Minting] Mint tx sent:', tx.hash)
+    // Preflight static call to surface revert reasons if any (helps debug missing revert data)
+    try {
+      await contract.callStatic.registerDomain(fullDomain, params.bio || '', params.socialLinks || '', txOptions)
+    } catch (staticErr) {
+      const staticMsg = staticErr instanceof Error ? staticErr.message : String(staticErr)
+      console.error('[Minting] Preflight registerDomain call failed:', staticMsg)
+      // Throw to be handled by outer catch and returned as user-friendly error
+      throw new Error(staticMsg)
+    }
+
+    const tx = await contract.registerDomain(fullDomain, params.bio || '', params.socialLinks || '', txOptions)
+
+    console.log('[Minting] Register tx sent:', tx.hash)
 
     // Wait untuk confirmation
     const receipt = await tx.wait()
 
     if (receipt && receipt.status === 1) {
-      const fullDomain = `${params.label}.${DOMAIN_TLD}`
-      console.log('[Minting] Mint successful!')
+      console.log('[Minting] Register successful!')
       console.log('[Minting] Domain:', fullDomain)
       console.log('[Minting] Block:', receipt.blockNumber)
 
@@ -232,7 +246,7 @@ export async function mintDomain(
         fullDomain,
       }
     } else {
-      throw new Error('Mint transaction failed or was reverted')
+      throw new Error('Register transaction failed or was reverted')
     }
   } catch (error) {
     const errorMsg = error instanceof Error ? error.message : 'Unknown error'
@@ -439,8 +453,9 @@ export async function isDomainAvailable(label: string): Promise<boolean> {
 
     const contract = new ethers.Contract(CONTRACT_ADDRESS, DOMAIN_CONTRACT_ABI, provider)
 
-    // Try to get domain info
-    const info = await contract.getDomainInfo(label)
+    // Try to get domain info (use full domain string)
+    const fullDomain = `${label}.${DOMAIN_TLD}`
+    const info = await contract.getDomainInfo(fullDomain)
     // Jika owner adalah zero address, maka domain available
     return info.owner === ethers.ZeroAddress
   } catch (error) {
