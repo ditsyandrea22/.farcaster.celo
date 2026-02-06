@@ -10,6 +10,7 @@ let sdkInitialized = false;
 
 /**
  * Check if the app is running in a Farcaster mini app context
+ * More robust dengan multiple fallback checks
  */
 export function isInMiniApp(): boolean {
   if (typeof window === 'undefined') {
@@ -17,10 +18,28 @@ export function isInMiniApp(): boolean {
   }
 
   try {
-    // SDK is available in mini app context
-    return sdk !== undefined;
+    // Check 1: Farcaster SDK available
+    if (sdk !== undefined) {
+      console.log('[SDK] Mini app detected via sdk');
+      return true;
+    }
+    
+    // Check 2: window.farcaster context available (indirect indicator)
+    if ((window as any).farcaster?.context) {
+      console.log('[SDK] Mini app detected via window.farcaster.context');
+      return true;
+    }
+    
+    // Check 3: Specific user agent patterns dari Farcaster clients
+    const userAgent = navigator.userAgent.toLowerCase();
+    if (userAgent.includes('warpcast') || userAgent.includes('farcaster')) {
+      console.log('[SDK] Mini app detected via user agent');
+      return true;
+    }
+    
+    return false;
   } catch (error) {
-    console.warn('Error checking mini app context:', error);
+    console.warn('[SDK] Error checking mini app context:', error);
     return false;
   }
 }
@@ -96,6 +115,38 @@ export async function getSafeContext() {
     console.error('[SDK] Error getting safe context:', error);
     return null;
   }
+}
+
+/**
+ * Monitor untuk SDK context availability
+ * Penting karena SDK context mungkin belum ready saat app load
+ */
+export function monitorSDKContext(callback: (context: any) => void): () => void {
+  let checkCount = 0;
+  const maxChecks = 60; // 30 seconds dengan interval 500ms
+  
+  const interval = setInterval(async () => {
+    checkCount++;
+    
+    try {
+      const context = await getFarcasterContext();
+      if (context) {
+        console.log('[SDK] Context available:', context);
+        callback(context);
+        clearInterval(interval);
+        return;
+      }
+    } catch (err) {
+      // Continue monitoring
+    }
+    
+    if (checkCount >= maxChecks) {
+      console.log('[SDK] Stopped monitoring context after 30s');
+      clearInterval(interval);
+    }
+  }, 500);
+  
+  return () => clearInterval(interval);
 }
 
 /**

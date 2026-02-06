@@ -1,7 +1,7 @@
 'use client'
 
 import { useState, useEffect, useRef } from 'react'
-import { Wallet, AlertCircle, Zap, Activity, CheckCircle2 } from 'lucide-react'
+import { Wallet, AlertCircle, Zap, Activity, CheckCircle2, RefreshCw } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { Card } from '@/components/ui/card'
 import { Badge } from '@/components/ui/badge'
@@ -9,7 +9,7 @@ import { useAccount, useConnect, useDisconnect, useBalance } from 'wagmi'
 import { formatAddress } from '@/lib/blockchain'
 import { isInMiniApp } from '@/lib/farcaster-sdk'
 import { getAuthenticatedUserInfo } from '@/lib/neynar-service'
-import { ConnectionMonitor, formatWalletError } from '@/lib/wallet-connect-utils'
+import { ConnectionMonitor, formatWalletError, monitorWalletAvailability } from '@/lib/wallet-connect-utils'
 
 interface WalletStatusProps {
   address?: string
@@ -41,17 +41,55 @@ export function WalletStatus({
   const [farcasterData, setFarcasterData] = useState<any>(null)
   const [fetchingFarcasterData, setFetchingFarcasterData] = useState(false)
   const [lastConnectorAttempt, setLastConnectorAttempt] = useState<string | null>(null)
+  const [isMonitoring, setIsMonitoring] = useState(false)
   const connectionMonitorRef = useRef(new ConnectionMonitor())
+  const monitorCleanupRef = useRef<(() => void) | null>(null)
 
-  // Initialize mini app status
+  // Initialize mini app status dan monitor wallet availability
   useEffect(() => {
     const miniAppStatus = isInMiniApp()
     setInMiniApp(miniAppStatus)
     console.log('[WalletStatus] Mini app status:', miniAppStatus)
-    if (miniAppStatus) {
-      setWalletAvailable(!!window.ethereum)
+    
+    // Log connector info untuk debugging
+    console.log('[WalletStatus] Available connectors on mount:')
+    connectors.forEach((c, idx) => {
+      console.log(`  ${idx + 1}. ${c.name} (id: ${c.id})`)
+    })
+    
+    // Check initial wallet availability
+    const initialWalletCheck = !!(window as any).ethereum
+    setWalletAvailable(initialWalletCheck)
+    console.log('[WalletStatus] Initial wallet check:', initialWalletCheck)
+    console.log('[WalletStatus] window.ethereum:', (window as any).ethereum?.name || 'not available')
+    
+    // Jika di mini app dan wallet belum available, monitor untuk availability
+    if (miniAppStatus && !initialWalletCheck) {
+      console.log('[WalletStatus] Starting wallet availability monitor (mini app mode)')
+      setIsMonitoring(true)
+      
+      // Setup monitoring untuk wallet yang di-inject oleh mini app
+      const cleanup = monitorWalletAvailability((hasWallet) => {
+        if (hasWallet) {
+          console.log('[WalletStatus] Wallet became available! Triggering auto-connect...')
+          setWalletAvailable(true)
+          setIsMonitoring(false)
+          // Tunggu sedikit sebelum auto-connect agar wallet provider fully initialized
+          setTimeout(() => {
+            handleConnect()
+          }, 500)
+        }
+      })
+      
+      monitorCleanupRef.current = cleanup
     }
-  }, [])
+    
+    return () => {
+      if (monitorCleanupRef.current) {
+        monitorCleanupRef.current()
+      }
+    }
+  }, [connectors])
 
   // Retry connection if it fails
   useEffect(() => {
@@ -139,11 +177,38 @@ export function WalletStatus({
         return
       }
       
-      // Use first connector (already prioritized in wagmi-config)
-      const selectedConnector = connectors[0]
+      // Smart connector selection untuk mini app
+      let selectedConnector = connectors[0]
+      
+      if (inMiniApp) {
+        // Di mini app, prioritaskan official Farcaster Mini App Connector jika tersedia
+        const farcasterConnector = connectors.find(c => 
+          c.id === 'farcaster' || 
+          c.name?.toLowerCase().includes('farcaster') ||
+          c.name?.toLowerCase().includes('miniapp')
+        )
+        
+        if (farcasterConnector) {
+          selectedConnector = farcasterConnector
+          console.log('[WalletStatus] Mini app detected: using Farcaster connector')
+        } else {
+          // Fallback ke Injected connector
+          const injectedConnector = connectors.find(c => c.id === 'injected')
+          if (injectedConnector) {
+            selectedConnector = injectedConnector
+            console.log('[WalletStatus] Mini app detected: using Injected connector')
+          }
+        }
+        
+        // Double-check wallet availability
+        if (!window.ethereum && !farcasterConnector) {
+          throw new Error('Wallet not available in mini app. Please refresh and try again.')
+        }
+      }
       
       console.log('[WalletStatus] Attempting connection with:', selectedConnector.name)
-      console.log('[WalletStatus] Available connectors:', connectors.map(c => c.name).join(', '))
+      console.log('[WalletStatus] Connector ID:', selectedConnector.id)
+      console.log('[WalletStatus] Available connectors:', connectors.map(c => `${c.id}(${c.name})`).join(', '))
       
       setLastConnectorAttempt(selectedConnector.name)
       connectionMonitorRef.current.recordFailure()
@@ -295,16 +360,38 @@ export function WalletStatus({
       )}
 
       {inMiniApp && (
-        <Card className="p-4 border-green-500/30 bg-green-500/10">
+        <Card className={`p-4 border-green-500/30 ${walletAvailable ? 'bg-green-500/10' : 'bg-blue-500/10'}`}>
           <div className="flex items-start gap-3">
-            <Activity className="w-5 h-5 text-green-600 flex-shrink-0 mt-0.5" />
-            <div>
-              <p className="text-sm font-medium text-green-900">Farcaster Mini App Detected</p>
-              <p className="text-xs text-green-800/80 mt-1">
-                {walletAvailable
-                  ? 'Wallet is available in mini app context'
-                  : 'Wallet not yet available - please wait'}
+            {isMonitoring ? (
+              <div className="animate-spin">
+                <RefreshCw className="w-5 h-5 text-blue-600 flex-shrink-0 mt-0.5" />
+              </div>
+            ) : (
+              <Activity className={`w-5 h-5 flex-shrink-0 mt-0.5 ${walletAvailable ? 'text-green-600' : 'text-blue-600'}`} />
+            )}
+            <div className="flex-1">
+              <p className={`text-sm font-medium ${walletAvailable ? 'text-green-900' : 'text-blue-900'}`}>
+                {walletAvailable ? 'Farcaster Mini App Detected' : 'Initializing Mini App'}
               </p>
+              <p className={`text-xs mt-1 ${walletAvailable ? 'text-green-800/80' : 'text-blue-800/80'}`}>
+                {walletAvailable
+                  ? '✓ Wallet is available in mini app context. Ready to connect!'
+                  : isMonitoring
+                  ? 'Detecting wallet provider... (this usually takes a few seconds)'
+                  : 'Mini app context detected'}
+              </p>
+              {inMiniApp && !walletAvailable && (
+                <Button
+                  variant="ghost"
+                  size="sm"
+                  onClick={handleConnect}
+                  disabled={isPending || isMonitoring}
+                  className="mt-2 h-8 px-2 text-xs gap-1 hover:bg-blue-600/20"
+                >
+                  <RefreshCw className="w-3 h-3" />
+                  Retry Now
+                </Button>
+              )}
             </div>
           </div>
         </Card>

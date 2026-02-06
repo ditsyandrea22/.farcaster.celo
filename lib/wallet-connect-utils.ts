@@ -14,7 +14,7 @@ export interface WalletConnectionStatus {
 }
 
 /**
- * Deteksi environment dan provider availability
+ * Deteksi environment dan provider availability dengan monitoring real-time
  */
 export function diagnoseWalletEnvironment(): WalletConnectionStatus {
   const isMiniApp = (window as any).farcaster?.context !== undefined
@@ -30,8 +30,41 @@ export function diagnoseWalletEnvironment(): WalletConnectionStatus {
   console.log('  - Mini App:', isMiniApp)
   console.log('  - Injected Provider:', hasInjectedProvider)
   console.log('  - Farcaster Context:', (window as any).farcaster?.context)
+  console.log('  - Provider Details:', {
+    eth: !!(window as any).ethereum,
+    ethName: (window as any).ethereum?.name || 'unknown',
+    isMetaMask: (window as any).ethereum?.isMetaMask,
+    isCoinbaseBrowser: (window as any).ethereum?.isCoinbaseBrowser,
+  })
   
   return status
+}
+
+/**
+ * Monitor untuk wallet availability saat runtime
+ * Penting untuk mini app karena wallet mungkin belum ready saat app load
+ */
+export function monitorWalletAvailability(callback: (hasWallet: boolean) => void): () => void {
+  const checkInterval = setInterval(() => {
+    const hasEthereum = !!(window as any).ethereum
+    if (hasEthereum) {
+      console.log('[WalletMonitor] Wallet detected!')
+      callback(true)
+      clearInterval(checkInterval)
+    }
+  }, 500) // Check every 500ms
+  
+  // Stop checking after 30 seconds
+  const timeout = setTimeout(() => {
+    clearInterval(checkInterval)
+    console.log('[WalletMonitor] Stopped monitoring after 30s')
+  }, 30000)
+  
+  // Return cleanup function
+  return () => {
+    clearInterval(checkInterval)
+    clearTimeout(timeout)
+  }
 }
 
 /**
