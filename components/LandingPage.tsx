@@ -7,9 +7,10 @@ import Image from 'next/image'
 
 interface LandingPageProps {
   onLaunchApp: () => void
+  onLearnMore: () => void
 }
 
-export function LandingPage({ onLaunchApp }: LandingPageProps) {
+export function LandingPage({ onLaunchApp, onLearnMore }: LandingPageProps) {
   const [isScrolled, setIsScrolled] = useState(false)
   const [activeFeature, setActiveFeature] = useState(0)
 
@@ -120,6 +121,7 @@ export function LandingPage({ onLaunchApp }: LandingPageProps) {
               <ArrowRight className="w-4 sm:w-5 h-4 sm:h-5 ml-2 sm:ml-3" />
             </Button>
             <Button
+              onClick={onLearnMore}
               variant="outline"
               size="lg"
               className="border-white/20 text-white hover:bg-white/10 text-base sm:text-lg px-6 sm:px-8 py-5 sm:py-6 h-auto w-full sm:w-auto"
