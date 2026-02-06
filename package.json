@@ -43,6 +43,7 @@
     "@vercel/analytics": "1.3.1",
     "@wagmi/connectors": "^2.7.0",
     "@wagmi/core": "^2.14.3",
+    "@walletconnect/modal": "^2.7.0",
     "autoprefixer": "^10.4.20",
     "class-variance-authority": "^0.7.1",
     "clsx": "^2.1.1",
@@ -78,6 +79,18 @@
     "postcss": "^8.5",
     "tailwindcss": "^4.1.9",
     "tw-animate-css": "1.3.3",
-    "typescript": "^5"
+    "typescript": "5.8.3"
+  },
+  "pnpm": {
+    "overrides": {
+      "typescript": "5.8.3",
+      "use-sync-external-store": "1.2.0",
+      "react": "19.2.0",
+      "react-dom": "19.2.0",
+      "@walletconnect/sign-client": "^2.17.0",
+      "@walletconnect/ethereum-provider": "^2.17.0",
+      "@walletconnect/universal-provider": "^2.17.0",
+      "lodash.isequal": "^4.5.0"
+    }
   }
 }
