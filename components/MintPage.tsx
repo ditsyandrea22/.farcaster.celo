@@ -65,55 +65,60 @@ export function MintPage({ onBack }: MintPageProps) {
 
       {/* Header */}
       <header className="sticky top-0 z-50 backdrop-blur-md bg-background/80 border-b border-white/5">
-        <div className="max-w-7xl mx-auto px-6 py-4 flex items-center justify-between">
-          <div className="flex items-center gap-4">
-            {onBack && (
-              <Button
-                variant="ghost"
-                size="icon"
-                onClick={onBack}
-                className="hover:bg-white/10"
-              >
-                <ArrowLeft className="w-5 h-5" />
-              </Button>
-            )}
-            <div className="flex items-center gap-3">
-              <div className="p-2 rounded-lg bg-gradient-to-br from-purple-500/20 to-blue-500/20">
-                <Sparkles className="w-5 h-5 text-purple-400" />
-              </div>
-              <div>
-                <h1 className="text-xl font-bold text-white">Farcaster Names</h1>
-                <p className="text-xs text-gray-400">Mint your .farcaster.celo domain</p>
+        <div className="max-w-7xl mx-auto px-4 sm:px-6 py-3 sm:py-4">
+          <div className="flex items-center justify-between gap-3 sm:gap-4">
+            <div className="flex items-center gap-2 sm:gap-3 min-w-0">
+              {onBack && (
+                <Button
+                  variant="ghost"
+                  size="icon"
+                  onClick={onBack}
+                  className="hover:bg-white/10 h-9 w-9 sm:h-10 sm:w-10 flex-shrink-0"
+                >
+                  <ArrowLeft className="w-4 h-4 sm:w-5 sm:h-5" />
+                </Button>
+              )}
+              <div className="flex items-center gap-2 sm:gap-3 min-w-0 flex-1">
+                <div className="p-1.5 sm:p-2 rounded-lg bg-gradient-to-br from-purple-500/20 to-blue-500/20 flex-shrink-0">
+                  <Sparkles className="w-4 h-4 sm:w-5 sm:h-5 text-purple-400" />
+                </div>
+                <div className="min-w-0 flex-1">
+                  <h1 className="text-base sm:text-xl font-bold text-white truncate">Farcaster Names</h1>
+                  <p className="text-xs text-gray-400 truncate hidden sm:block">Mint your .farcaster.celo domain</p>
+                </div>
               </div>
             </div>
+            <div className="flex-shrink-0">
+              <WalletStatus
+                onAccountChange={handleAccountChange}
+                autoFetchFarcasterData={true}
+                compact={true}
+              />
+            </div>
           </div>
-          <WalletStatus
-            onAccountChange={handleAccountChange}
-            autoFetchFarcasterData={true}
-          />
         </div>
       </header>
 
-      <main className="max-w-6xl mx-auto px-4 py-8 md:py-12">
-        <div className="grid lg:grid-cols-3 gap-8">
+      <main className="max-w-6xl mx-auto px-4 sm:px-6 py-8 md:py-12">
+        <div className="grid lg:grid-cols-3 gap-6 lg:gap-8">
           {/* Main Content */}
-          <div className="lg:col-span-2 space-y-6">
+          <div className="lg:col-span-2 space-y-4 sm:space-y-6">
             {/* Stats Section */}
-            <div className="grid grid-cols-2 gap-4">
-              <Card className="p-4 bg-gradient-to-br from-purple-500/10 to-purple-500/5 border-purple-500/20">
+            <div className="grid grid-cols-2 gap-3 sm:gap-4">
+              <Card className="p-3 sm:p-4 bg-gradient-to-br from-purple-500/10 to-purple-500/5 border-purple-500/20">
                 <div className="flex items-center gap-2 mb-2">
-                  <Network className="w-4 h-4 text-purple-400" />
+                  <Network className="w-3 h-3 sm:w-4 sm:h-4 text-purple-400" />
                   <span className="text-xs text-gray-400">Network</span>
                 </div>
-                <p className="text-sm font-semibold text-white">Celo Mainnet</p>
+                <p className="text-xs sm:text-sm font-semibold text-white">Celo Mainnet</p>
               </Card>
               {gasEstimate && (
-                <Card className="p-4 bg-gradient-to-br from-blue-500/10 to-blue-500/5 border-blue-500/20">
+                <Card className="p-3 sm:p-4 bg-gradient-to-br from-blue-500/10 to-blue-500/5 border-blue-500/20">
                   <div className="flex items-center gap-2 mb-2">
-                    <Zap className="w-4 h-4 text-blue-400" />
+                    <Zap className="w-3 h-3 sm:w-4 sm:h-4 text-blue-400" />
                     <span className="text-xs text-gray-400">Gas Fee</span>
                   </div>
-                  <p className="text-sm font-semibold text-white">
+                  <p className="text-xs sm:text-sm font-semibold text-white">
                     {gasEstimate.totalCostCELO || '~5'} CELO
                   </p>
                 </Card>
@@ -121,7 +126,7 @@ export function MintPage({ onBack }: MintPageProps) {
             </div>
 
             {/* Tabs Section */}
-            <Card className="p-6 border-white/10 bg-background/50 backdrop-blur-sm">
+            <Card className="p-4 sm:p-6 border-white/10 bg-background/50 backdrop-blur-sm">
               <Tabs value={activeTab} onValueChange={setActiveTab} className="w-full">
                 <TabsList className="grid w-full grid-cols-2 bg-white/5 p-1 rounded-lg">
                   <TabsTrigger
@@ -155,52 +160,52 @@ export function MintPage({ onBack }: MintPageProps) {
           </div>
 
           {/* Sidebar - Info Panel */}
-          <div className="lg:col-span-1 space-y-6">
+          <div className="lg:col-span-1 space-y-4 sm:space-y-6">
             {/* Info Card */}
-            <Card className="p-6 border-white/10 bg-gradient-to-br from-purple-500/10 to-blue-500/10">
-              <h3 className="text-lg font-bold text-white mb-4">How it works</h3>
-              <ol className="space-y-4">
-                <li className="flex gap-3">
+            <Card className="p-4 sm:p-6 border-white/10 bg-gradient-to-br from-purple-500/10 to-blue-500/10">
+              <h3 className="text-base sm:text-lg font-bold text-white mb-3 sm:mb-4">How it works</h3>
+              <ol className="space-y-3 sm:space-y-4">
+                <li className="flex gap-2 sm:gap-3">
                   <span className="flex items-center justify-center w-6 h-6 rounded-full bg-gradient-to-r from-purple-500 to-blue-500 text-white text-sm font-bold flex-shrink-0">
                     1
                   </span>
-                  <span className="text-sm text-gray-300">Connect your Farcaster wallet</span>
+                  <span className="text-xs sm:text-sm text-gray-300">Connect your Farcaster wallet</span>
                 </li>
-                <li className="flex gap-3">
+                <li className="flex gap-2 sm:gap-3">
                   <span className="flex items-center justify-center w-6 h-6 rounded-full bg-gradient-to-r from-purple-500 to-blue-500 text-white text-sm font-bold flex-shrink-0">
                     2
                   </span>
-                  <span className="text-sm text-gray-300">Choose your domain name</span>
+                  <span className="text-xs sm:text-sm text-gray-300">Choose your domain name</span>
                 </li>
-                <li className="flex gap-3">
+                <li className="flex gap-2 sm:gap-3">
                   <span className="flex items-center justify-center w-6 h-6 rounded-full bg-gradient-to-r from-purple-500 to-blue-500 text-white text-sm font-bold flex-shrink-0">
                     3
                   </span>
-                  <span className="text-sm text-gray-300">Claim your domain and mint as NFT</span>
+                  <span className="text-xs sm:text-sm text-gray-300">Claim your domain and mint as NFT</span>
                 </li>
-                <li className="flex gap-3">
+                <li className="flex gap-2 sm:gap-3">
                   <span className="flex items-center justify-center w-6 h-6 rounded-full bg-gradient-to-r from-purple-500 to-blue-500 text-white text-sm font-bold flex-shrink-0">
                     4
                   </span>
-                  <span className="text-sm text-gray-300">Start using your identity</span>
+                  <span className="text-xs sm:text-sm text-gray-300">Start using your identity</span>
                 </li>
               </ol>
             </Card>
 
             {/* Requirements Card */}
-            <Card className="p-6 border-white/10 bg-gradient-to-br from-green-500/10 to-emerald-500/10">
-              <h3 className="text-lg font-bold text-white mb-4">Requirements</h3>
+            <Card className="p-4 sm:p-6 border-white/10 bg-gradient-to-br from-green-500/10 to-emerald-500/10">
+              <h3 className="text-base sm:text-lg font-bold text-white mb-3 sm:mb-4">Requirements</h3>
               <ul className="space-y-2">
-                <li className="text-sm text-gray-300 flex items-start gap-2">
-                  <span className="text-green-400 mt-0.5">✓</span>
+                <li className="text-xs sm:text-sm text-gray-300 flex items-start gap-2">
+                  <span className="text-green-400 mt-0.5 flex-shrink-0">✓</span>
                   Farcaster account
                 </li>
-                <li className="text-sm text-gray-300 flex items-start gap-2">
-                  <span className="text-green-400 mt-0.5">✓</span>
+                <li className="text-xs sm:text-sm text-gray-300 flex items-start gap-2">
+                  <span className="text-green-400 mt-0.5 flex-shrink-0">✓</span>
                   Web3 wallet on Celo
                 </li>
-                <li className="text-sm text-gray-300 flex items-start gap-2">
-                  <span className="text-green-400 mt-0.5">✓</span>
+                <li className="text-xs sm:text-sm text-gray-300 flex items-start gap-2">
+                  <span className="text-green-400 mt-0.5 flex-shrink-0">✓</span>
                   Enough CELO for gas fees
                 </li>
               </ul>

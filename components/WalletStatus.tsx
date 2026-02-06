@@ -17,6 +17,7 @@ interface WalletStatusProps {
   gasPrice?: string
   onAccountChange?: (account: { address: string; chainId: number; isConnected: boolean; farcasterData?: any } | null) => void
   autoFetchFarcasterData?: boolean
+  compact?: boolean
 }
 
 export function WalletStatus({ 
@@ -24,7 +25,8 @@ export function WalletStatus({
   onConnect, 
   gasPrice, 
   onAccountChange: onAccountChangeProp,
-  autoFetchFarcasterData = true
+  autoFetchFarcasterData = true,
+  compact = false
 }: WalletStatusProps) {
   const { address, isConnected, chainId } = useAccount()
   const { connect, connectors, isPending } = useConnect()
@@ -181,6 +183,26 @@ export function WalletStatus({
   if (isConnected && address) {
     const balance = balanceData ? parseFloat((Number(balanceData.value) / Math.pow(10, balanceData.decimals)).toString()).toFixed(4) : '0.00'
 
+    // Compact mode - for header/tight spaces
+    if (compact) {
+      return (
+        <div className="flex items-center gap-2">
+          <Button
+            variant="ghost"
+            size="sm"
+            onClick={handleDisconnect}
+            className="text-xs sm:text-sm h-9 sm:h-10 px-2 sm:px-4 hover:bg-white/10 text-gray-300 hover:text-white"
+            title={formatAddress(address)}
+          >
+            <Wallet className="w-4 h-4 mr-1 flex-shrink-0" />
+            <span className="hidden xs:inline truncate max-w-[80px] sm:max-w-none">
+              {balance} {balanceData?.symbol || 'ETH'}
+            </span>
+          </Button>
+        </div>
+      )
+    }
+
     return (
       <Card className="p-5 dashboard-card border-primary/40 animate-fade-in-down space-y-4">
         <div className="flex items-center justify-between gap-4">
@@ -236,6 +258,20 @@ export function WalletStatus({
           </div>
         )}
       </Card>
+    )
+  }
+
+  // Disconnected state
+  if (compact) {
+    return (
+      <Button
+        onClick={handleConnect}
+        disabled={isPending}
+        className="h-9 sm:h-10 px-2 sm:px-4 text-xs sm:text-sm gap-1 sm:gap-2 font-semibold bg-gradient-to-r from-purple-500 to-blue-500 hover:from-purple-600 hover:to-blue-600 text-white border-0"
+        size="sm"
+      >
+        {isPending ? 'Connecting...' : 'Connect Wallet'}
+      </Button>
     )
   }
 
