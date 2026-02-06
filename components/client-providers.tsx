@@ -4,7 +4,7 @@ import React from "react"
 import dynamic from "next/dynamic"
 import { ReactQueryProvider } from "@/components/react-query-provider"
 
-// Dynamically import WalletProvider and FarcasterSDKProvider with ssr: false
+// Dynamically import providers with ssr: false
 // to avoid bundling pino during server-side rendering
 const WalletProvider = dynamic(() => import("@/components/wallet-provider").then(mod => ({ default: mod.WalletProvider })), {
   ssr: false,
